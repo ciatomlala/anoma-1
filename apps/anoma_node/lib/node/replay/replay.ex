@@ -32,9 +32,15 @@ defmodule Anoma.Node.Replay do
   @type round :: integer()
   @type consensi :: [[binary()]]
   @type transactions :: [Backends.transaction()]
-
   @type replay_data :: {consensi, round, block_info, transactions}
 
+  @type mempool_args :: [
+          transactions: [any()],
+          round: non_neg_integer(),
+          consensus: [any()]
+        ]
+  @type ordering_args :: [next_height: non_neg_integer()]
+  @type storage_args :: [uncommitted_height: non_neg_integer()]
   ############################################################
   #                       Public                             #
   ############################################################
@@ -59,12 +65,12 @@ defmodule Anoma.Node.Replay do
   @doc """
   I attempt to replay the data for a given node id.
   """
-  @spec replay_for(String.t()) :: {:ok, :succeeded} | {:error, :replay_failed}
+  @spec replay_for(String.t()) :: {:ok, any()} | {:error, :replay_failed}
   def replay_for(node_id) do
     temp_node_id = temporary_node_id()
 
     with {:ok, _} <- init_tables_node(node_id, temp_node_id),
-         {:ok, args} <- supervisor_args(node_id, temp_node_id) do
+         {:ok, args} <- supervisor_args(node_id) do
       EventBroker.subscribe_me([])
 
       Anoma.Supervisor.start_node(
@@ -82,11 +88,14 @@ defmodule Anoma.Node.Replay do
 
         _ ->
           EventBroker.unsubscribe_me([])
-          :fail
+          {:error, :replay_failed}
       end
     end
   end
 
+  @spec init_tables_node(any(), binary()) ::
+          {:error, :failed_to_create_replay_node | :target_node_existed}
+          | {:ok, :data_initialized}
   @doc """
   Given a node id, I will create the tables for the node and initialize them with
   the data used to replay.
@@ -104,14 +113,10 @@ defmodule Anoma.Node.Replay do
       {:error, :failed_to_initialize_tables} ->
         Logger.error("failed to create replay node #{inspect(to_node_id)}")
         {:error, :failed_to_create_replay_node}
-
-      {:error, :failed_to_read_replay_data} ->
-        Logger.error("failed to read replay data from node '#{from_node_id}'")
-        {:error, :failed_to_create_replay_node}
     end
   end
 
-  def supervisor_args(from_node_id, to_node_id) do
+  def supervisor_args(from_node_id) do
     with {:ok, replay_data} <- replay_data(from_node_id),
          {:ok, mempool} <- mempool_args(replay_data),
          {:ok, ordering} <- ordering_args(replay_data),
@@ -123,14 +128,6 @@ defmodule Anoma.Node.Replay do
          storage: storage
        ]}
     else
-      {:ok, :existing} ->
-        Logger.error("data found for replay node #{inspect(to_node_id)}")
-        {:error, :target_node_existed}
-
-      {:error, :failed_to_initialize_tables} ->
-        Logger.error("failed to create replay node #{inspect(to_node_id)}")
-        {:error, :failed_to_create_replay_node}
-
       {:error, :failed_to_read_replay_data} ->
         Logger.error("failed to read replay data from node '#{from_node_id}'")
         {:error, :failed_to_create_replay_node}
@@ -191,11 +188,7 @@ defmodule Anoma.Node.Replay do
   # Given the replay data, I return the arguments to be passed to the
   # mempool in the temporary node.
   # """
-  @spec mempool_args(replay_data) :: [
-          transactions: [any()],
-          round: non_neg_integer(),
-          consensus: [any()]
-        ]
+  @spec mempool_args(replay_data) :: {:ok, mempool_args}
   defp mempool_args(replay_data) do
     {consensi, round, _, transactions} = replay_data
 
@@ -211,7 +204,7 @@ defmodule Anoma.Node.Replay do
   # Given the replay data, I return the arguments to be passed to the
   # ordering engine in the temporary node.
   # """
-  @spec ordering_args(replay_data) :: [next_height: non_neg_integer()]
+  @spec ordering_args(replay_data) :: {:ok, ordering_args}
   defp ordering_args(replay_data) do
     {_, _, {_committed_round, height}, _} = replay_data
     {:ok, [next_height: height + 1]}
@@ -221,7 +214,7 @@ defmodule Anoma.Node.Replay do
   # Given the replay data, I return the arguments to be passed to the
   # storage engine in the temporary node.
   # """
-  @spec storage_args(replay_data) :: [uncommitted_height: non_neg_integer()]
+  @spec storage_args(replay_data) :: {:ok, storage_args}
   defp storage_args(replay_data) do
     {_, _, {_committed_round, height}, _} = replay_data
     {:ok, [uncommitted_height: height]}
