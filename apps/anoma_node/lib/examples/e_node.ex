@@ -97,8 +97,8 @@ defmodule Anoma.Node.Examples.ENode do
               enode
           end
 
-        {:error, _} ->
-          {:error, :failed_to_start_node}
+        {:error, e} ->
+          {:error, :failed_to_start_node, e}
       end
 
     case enode do
