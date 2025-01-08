@@ -89,10 +89,12 @@ defmodule Anoma.Node.Examples.ELogging do
 
   @spec check_consensus_event(ENode.t()) :: ENode.t()
   def check_consensus_event(enode \\ ENode.start_node()) do
+    # fire events using a previous example
     check_tx_event(enode)
-    table_name = Tables.table_events(enode.node_id)
 
-    :mnesia.subscribe({:table, table_name, :simple})
+    # subscribe to events coming from the events table
+    events_table = Tables.table_events(enode.node_id)
+    :mnesia.subscribe({:table, events_table, :simple})
 
     consensus_event(["id 1"], enode.node_id)
 
