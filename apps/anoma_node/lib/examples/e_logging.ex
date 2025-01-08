@@ -100,15 +100,15 @@ defmodule Anoma.Node.Examples.ELogging do
 
     assert_receive(
       {:mnesia_table_event,
-       {:write, {^table_name, :consensus, [["id 1"]]}, _}},
+       {:write, {^events_table, :consensus, [["id 1"]]}, _}},
       5000
     )
 
-    :mnesia.unsubscribe({:table, table_name, :simple})
+    :mnesia.unsubscribe({:table, events_table, :simple})
 
-    assert {:atomic, [{^table_name, :consensus, [["id 1"]]}]} =
+    assert {:atomic, [{^events_table, :consensus, [["id 1"]]}]} =
              :mnesia.transaction(fn ->
-               :mnesia.read(table_name, :consensus)
+               :mnesia.read(events_table, :consensus)
              end)
 
     enode
