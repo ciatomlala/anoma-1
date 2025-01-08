@@ -1,18 +1,146 @@
 defmodule Anoma.Node.Examples.ELogging do
-  # alias Anoma.Node
-  # alias Anoma.Node.Examples.ENode
+  @moduledoc """
+  I define examples that test the behavior of the logging engine.
+  """
+
+  alias Anoma.Node.Event
+  alias Anoma.Node.Examples.ENode
+  alias Anoma.Node.Tables
+  alias Anoma.Node.Transaction.Backends
+  alias Anoma.Node.Transaction.Mempool
+
   # alias Anoma.Node.Logging
-  # alias Anoma.Node.Tables
-  # alias Anoma.Node.Transaction.Backends
-  # alias Anoma.Node.Transaction.Mempool
   # alias Anoma.Node.Transaction.Storage
 
-  # require Node.Event
+  require Anoma.Node.Event
+  require ExUnit.Assertions
 
-  # require ExUnit.Assertions
-  # import ExUnit.Assertions
+  import ExUnit.Assertions
 
-  # use EventBroker.WithSubscription
+  use EventBroker.WithSubscription
+
+  @doc """
+  I test the events from the mnesia tables by creating an event
+  and asserting I receive it.
+  """
+  @spec check_tx_event(ENode.t()) :: {ENode.t(), String.t()}
+  def check_tx_event(enode \\ ENode.start_node()) do
+    # subscribe to events coming from the events table
+    events_table = Tables.table_events(enode.node_id)
+    :mnesia.subscribe({:table, events_table, :simple})
+
+    # create and fire a random event
+    {event_1, id_1, code_1, backend_1} = random_tx_event(enode.node_id)
+    EventBroker.event(event_1)
+
+    assert_receive(
+      {:mnesia_table_event,
+       {:write, {^events_table, ^id_1, {^backend_1, ^code_1}}, _}},
+      5000
+    )
+
+    assert {:atomic, [{^events_table, ^id_1, {^backend_1, ^code_1}}]} =
+             :mnesia.transaction(fn ->
+               :mnesia.read(events_table, id_1)
+             end)
+
+    :mnesia.unsubscribe({:table, events_table, :simple})
+
+    {enode, id_1}
+  end
+
+  @doc """
+  I test whether multiple transactions events are received properly.
+  """
+  @spec check_multiple_tx_events(ENode.t()) :: ENode.t()
+  def check_multiple_tx_events(enode \\ ENode.start_node()) do
+    # subscribe to events coming from the events table
+    events_table = Tables.table_events(enode.node_id)
+    :mnesia.subscribe({:table, events_table, :simple})
+
+    {event_1, id_1, code_1, backend_1} = random_tx_event(enode.node_id)
+    EventBroker.event(event_1)
+
+    {event_2, id_2, code_2, backend_2} = random_tx_event(enode.node_id)
+    EventBroker.event(event_2)
+
+    # assert that the event is received
+    assert_receive(
+      {:mnesia_table_event,
+       {:write, {^events_table, ^id_1, {^backend_1, ^code_1}}, _}},
+      5000
+    )
+
+    # assert that the event is received
+    assert_receive(
+      {:mnesia_table_event,
+       {:write, {^events_table, ^id_2, {^backend_2, ^code_2}}, _}},
+      5000
+    )
+
+    :mnesia.unsubscribe({:table, events_table, :simple})
+
+    enode
+  end
+
+  ############################################################
+  #                      Consensus event                     #
+  ############################################################
+
+  @spec check_consensus_event(ENode.t()) :: ENode.t()
+  def check_consensus_event(enode \\ ENode.start_node()) do
+    check_tx_event(enode)
+    table_name = Tables.table_events(enode.node_id)
+
+    :mnesia.subscribe({:table, table_name, :simple})
+
+    consensus_event(["id 1"], enode.node_id)
+
+    assert_receive(
+      {:mnesia_table_event,
+       {:write, {^table_name, :consensus, [["id 1"]]}, _}},
+      5000
+    )
+
+    :mnesia.unsubscribe({:table, table_name, :simple})
+
+    assert {:atomic, [{^table_name, :consensus, [["id 1"]]}]} =
+             :mnesia.transaction(fn ->
+               :mnesia.read(table_name, :consensus)
+             end)
+
+    enode
+  end
+
+  @doc """
+  I fire a consensus event and test whether a notification is sent
+  of that exact event.
+  """
+
+  # @spec check_consensus_event(ENode.t()) :: ENode.t()
+  # def check_consensus_event(enode \\ ENode.start_node()) do
+  #   # subscribe to events coming from the events table
+  #   events_table = Tables.table_events(enode.node_id)
+  #   :mnesia.subscribe({:table, events_table, :simple})
+
+  #   # fire an event using previous example
+  #   {_node, event_id} = check_tx_event(enode)
+
+  #   assert_receive(
+  #     {:mnesia_table_event,
+  #      {:write, {^events_table, :consensus, [[^event_id]]}, _}},
+  #     5000
+  #   )
+
+  #   :mnesia.unsubscribe({:table, events_table, :simple})
+
+  #   assert {:atomic, [{^events_table, :consensus, [["id 1"]]}]} =
+  #            :mnesia.transaction(fn ->
+  #              :mnesia.read(events_table, :consensus)
+  #            end)
+
+  #   enode
+  # end
 
   # @spec check_tx_event(String.t()) :: String.t()
   # def check_tx_event(node_id \\ Node.example_random_id()) do
@@ -36,77 +164,6 @@ defmodule Anoma.Node.Examples.ELogging do
   #            end)
 
   #   :mnesia.unsubscribe({:table, table_name, :simple})
-  #   node_id
-  # end
-
-  # @spec check_multiple_tx_events(String.t()) :: String.t()
-  # def check_multiple_tx_events(node_id \\ Node.example_random_id()) do
-  #   ENode.start_node(node_id: node_id)
-
-  #   table_name = Tables.table_events(node_id)
-
-  #   :mnesia.subscribe({:table, table_name, :simple})
-
-  #   tx_event("id 1", :transparent_resource, "code 1", node_id)
-  #   tx_event("id 2", :transparent_resource, "code 2", node_id)
-
-  #   assert_receive(
-  #     {:mnesia_table_event,
-  #      {:write, {^table_name, "id 1", {:transparent_resource, "code 1"}}, _}},
-  #     5000
-  #   )
-
-  #   assert_receive(
-  #     {:mnesia_table_event,
-  #      {:write, {^table_name, "id 2", {:transparent_resource, "code 2"}}, _}},
-  #     5000
-  #   )
-
-  #   assert {:atomic,
-  #           [{^table_name, "id 1", {:transparent_resource, "code 1"}}]} =
-  #            :mnesia.transaction(fn ->
-  #              :mnesia.read(table_name, "id 1")
-  #            end)
-
-  #   assert {:atomic,
-  #           [{^table_name, "id 2", {:transparent_resource, "code 2"}}]} =
-  #            :mnesia.transaction(fn ->
-  #              :mnesia.read(table_name, "id 2")
-  #            end)
-
-  #   :mnesia.unsubscribe({:table, table_name, :simple})
-  #   node_id
-  # end
-
-  # ############################################################
-  # #                      Consensus event                     #
-  # ############################################################
-
-  # @spec check_consensus_event(String.t()) :: String.t()
-  # def check_consensus_event(
-  #       node_id \\ Node.example_random_id()
-  #       |> Base.url_encode64()
-  #     ) do
-  #   check_tx_event(node_id)
-  #   table_name = Tables.table_events(node_id)
-
-  #   :mnesia.subscribe({:table, table_name, :simple})
-
-  #   consensus_event(["id 1"], node_id)
-
-  #   assert_receive(
-  #     {:mnesia_table_event,
-  #      {:write, {^table_name, :consensus, [["id 1"]]}, _}},
-  #     5000
-  #   )
-
-  #   :mnesia.unsubscribe({:table, table_name, :simple})
-
-  #   assert {:atomic, [{^table_name, :consensus, [["id 1"]]}]} =
-  #            :mnesia.transaction(fn ->
-  #              :mnesia.read(table_name, :consensus)
-  #            end)
-
   #   node_id
   # end
 
@@ -551,10 +608,17 @@ defmodule Anoma.Node.Examples.ELogging do
   #   :ok
   # end
 
+  ############################################################
+  #                       Private Helpers                    #
+  ############################################################
+
+  # @doc """
+  # I fire a transaction event.
+  # """
   # @spec tx_event(binary(), Backends.backend(), Noun.t(), String.t()) :: :ok
   # def tx_event(id, backend, code, node_id) do
   #   event =
-  #     Node.Event.new_with_body(node_id, %Mempool.TxEvent{
+  #     Event.new_with_body(node_id, %Mempool.TxEvent{
   #       id: id,
   #       tx: %Mempool.Tx{backend: backend, code: code}
   #     })
@@ -562,15 +626,36 @@ defmodule Anoma.Node.Examples.ELogging do
   #   EventBroker.event(event)
   # end
 
-  # @spec consensus_event(list(binary()), String.t()) :: :ok
-  # def consensus_event(order, node_id) do
-  #   event =
-  #     Node.Event.new_with_body(node_id, %Mempool.ConsensusEvent{
-  #       order: order
-  #     })
+  @doc """
+  I create a random transaction event.
+  """
+  @spec random_tx_event(String.t(), atom()) ::
+          {Event.t(), String.t(), String.t(), atom()}
+  def random_tx_event(node_id, backend \\ :transparent_resource) do
+    id = "#{:erlang.phash2(make_ref())}"
+    code = "#{:erlang.phash2(make_ref())}"
 
-  #   EventBroker.event(event)
-  # end
+    event =
+      Event.new_with_body(node_id, %Mempool.TxEvent{
+        id: id,
+        tx: %Mempool.Tx{backend: backend, code: code}
+      })
+
+    {event, id, code, backend}
+  end
+
+  @doc """
+  I create a random consensus event.
+  """
+  @spec consensus_event(list(binary()), String.t()) :: :ok
+  def consensus_event(order, node_id) do
+    event =
+      Event.new_with_body(node_id, %Mempool.ConsensusEvent{
+        order: order
+      })
+
+    EventBroker.event(event)
+  end
 
   # @spec block_event(list(binary()), non_neg_integer(), String.t()) :: :ok
   # def block_event(order, round, node_id) do
