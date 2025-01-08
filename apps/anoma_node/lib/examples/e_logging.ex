@@ -90,23 +90,23 @@ defmodule Anoma.Node.Examples.ELogging do
   @spec check_consensus_event(ENode.t()) :: ENode.t()
   def check_consensus_event(enode \\ ENode.start_node()) do
     # fire events using a previous example
-    check_tx_event(enode)
+    {_node, event_id} = check_tx_event(enode)
 
     # subscribe to events coming from the events table
     events_table = Tables.table_events(enode.node_id)
     :mnesia.subscribe({:table, events_table, :simple})
 
-    consensus_event(["id 1"], enode.node_id)
+    consensus_event([event_id], enode.node_id)
 
     assert_receive(
       {:mnesia_table_event,
-       {:write, {^events_table, :consensus, [["id 1"]]}, _}},
+       {:write, {^events_table, :consensus, [[^event_id]]}, _}},
       5000
     )
 
     :mnesia.unsubscribe({:table, events_table, :simple})
 
-    assert {:atomic, [{^events_table, :consensus, [["id 1"]]}]} =
+    assert {:atomic, [{^events_table, :consensus, [[^event_id]]}]} =
              :mnesia.transaction(fn ->
                :mnesia.read(events_table, :consensus)
              end)
