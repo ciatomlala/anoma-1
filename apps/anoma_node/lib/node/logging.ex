@@ -336,58 +336,6 @@ defmodule Anoma.Node.Logging do
     |> EventBroker.event()
   end
 
-  # @spec process_mempool(integer(), integer(), atom(), list()) :: list()
-  # defp process_mempool(committed_round, round, event_table, pending) do
-  #   if committed_round == round do
-  #     [
-  #       transactions: replay_tx_list(event_table),
-  #       round: round + 1,
-  #       consensus: pending
-  #     ]
-  #   else
-  #     {executed, remaining} =
-  #       Enum.split(pending, committed_round - round + 1)
-
-  #     for id <- Enum.concat(executed) do
-  #       :mnesia.delete({event_table, id})
-  #     end
-
-  #     [
-  #       transactions: replay_tx_list(event_table),
-  #       round: committed_round + 1,
-  #       consensus: remaining
-  #     ]
-  #   end
-  # end
-
-  # @spec block_match(atom) :: {integer(), non_neg_integer()}
-  # defp block_match(block_table) do
-  #   blocks =
-  #     case :mnesia.match_object({block_table, :_, :_}) do
-  #       [] -> [{:ok, -1, []}]
-  #       res -> res
-  #     end
-
-  #   for {_, n, block} <- blocks,
-  #       reduce: {-1, 0} do
-  #     {_block_round, length} -> {n, length + length(block)}
-  #   end
-  # end
-
-  # @spec replay_tx_list(atom()) :: list({binary(), any()})
-  # defp replay_tx_list(event_table) do
-  #   list = :mnesia.all_keys(event_table)
-
-  #   for id <- Enum.reject(list, fn x -> x == :consensus or x == :round end),
-  #       reduce: [] do
-  #     lst ->
-  #       [{^event_table, ^id, tx_w_backend}] =
-  #         :mnesia.read(event_table, id)
-
-  #       [{id, tx_w_backend} | lst]
-  #   end
-  # end
-
   @spec match(atom(), atom()) :: any()
   defp match(flag, table) do
     case :mnesia.read({table, flag}) do
