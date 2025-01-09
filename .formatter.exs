@@ -13,5 +13,6 @@ rejected =
 
 [
   inputs: inputs -- rejected,
-  line_length: 78
+  line_length: 78,
+  locals_without_parens: [docp: 1]
 ]

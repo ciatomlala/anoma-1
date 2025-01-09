@@ -27,6 +27,7 @@ defmodule Anoma.Node.Transaction.Executor do
   use GenServer
 
   require Node.Event
+  require Logger
 
   ############################################################
   #                         State                            #
@@ -210,6 +211,7 @@ defmodule Anoma.Node.Transaction.Executor do
           }
         }
       } ->
+        Logger.error("transaction result: #{inspect({res, id})}")
         {res, id}
     after
       5000 -> raise "Timeout waiting for #{inspect(id)}"

@@ -5,6 +5,8 @@ defmodule Anoma.Node.Examples.EReplay do
 
   alias Anoma.Node.Event
   alias Anoma.Node.Examples.ELogging
+  alias Anoma.Node.Examples.ETransaction
+  alias Anoma.Node.Examples.Mempool, as: EMempool
   alias Anoma.Node.Examples.ENode
   alias Anoma.Node.Replay
   alias Anoma.Node.Tables
@@ -13,6 +15,8 @@ defmodule Anoma.Node.Examples.EReplay do
   import ExUnit.Assertions
 
   use EventBroker.WithSubscription
+
+  require Logger
 
   @doc """
   I try replay for the given node, and assert it succeeded.
@@ -30,30 +34,15 @@ defmodule Anoma.Node.Examples.EReplay do
   end
 
   @doc """
-  I execute replay on a node that has one consensus in its storage.
+  I execute replay on a node that has a transaction in its mempool.
   """
-  @spec replay_with_consensus(ENode.t()) :: ENode.t()
-  def replay_with_consensus(enode \\ ENode.start_node()) do
-    # use examples from logging to populate the tables
-    # this example leaves one transaction in the mempool
-    {_node, tx_ids, block_tx_ids} = ELogging.check_block_event_subset(enode)
+  @spec replay_with_transaction(ENode.t()) :: ENode.t()
+  def replay_with_transaction(enode \\ ENode.start_node()) do
+    # insert a transaction into the mempool
+    {_node, _transaction} = EMempool.add_transaction(enode)
 
-    IO.inspect(tx_ids, label: "tx_ids")
-    IO.inspect(block_tx_ids, label: "block_tx_ids")
-
-    # assert replay works
-    with_subscription [[%Mempool.TxFilter{}]] do
-      replay_succeeds(enode)
-
-      for _ <- 1..100 do
-        receive do
-          m ->
-            IO.inspect(m)
-        after
-          0 -> :ok
-        end
-      end
-    end
+    # assert replay works for this node.
+    replay_succeeds(enode)
 
     enode
   end

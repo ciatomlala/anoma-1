@@ -319,9 +319,25 @@ defmodule Anoma.Node.Examples.ETransaction do
      ENock.transparent_core(ENock.trivial_swap_no_eph())}
   end
 
+  @doc """
+  I define a transaction that cannot be executed and errors.
+  """
+  @spec faulty_transaction() :: {Backends.backend(), Noun.t()}
+  def faulty_transaction() do
+    {:debug_term_storage, [0 | 0]}
+  end
+
   ############################################################
   #                        Transactions                      #
   ############################################################
+
+  @doc """
+  I create a random transaction id.
+  """
+  @spec random_transaction_id() :: String.t()
+  def random_transaction_id() do
+    Base.encode64(:crypto.strong_rand_bytes(16))
+  end
 
   @spec submit_successful_trivial_swap(String.t()) :: String.t()
   def submit_successful_trivial_swap(node_id \\ Node.example_random_id()) do

@@ -1,6 +1,9 @@
 defmodule Anoma.Node.Examples.ELogging do
   @moduledoc """
   I define examples that test the behavior of the logging engine.
+
+  These examples do not use the actual system of transactions.
+  They only send events, and test the events that are a result of them.
   """
 
   alias Anoma.Node.Event
