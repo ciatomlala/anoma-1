@@ -302,7 +302,7 @@ defmodule Anoma.Node.Transaction.Ordering do
     call = &chose_write_function(write_opt).(state.node_id, &1)
 
     with {:ok, height} <- Map.fetch(state.tx_id_to_height, tx_id) do
-      Task.start(fn ->
+      Task.start_link(fn ->
         GenServer.reply(from, call.({height, args}))
       end)
     else
@@ -322,7 +322,7 @@ defmodule Anoma.Node.Transaction.Ordering do
   @spec handle_read({binary(), any()}, GenServer.from(), t()) :: any()
   defp handle_read({tx_id, key}, from, state) do
     with {:ok, height} <- Map.fetch(state.tx_id_to_height, tx_id) do
-      Task.start(fn ->
+      Task.start_link(fn ->
         GenServer.reply(from, Storage.read(state.node_id, {height - 1, key}))
       end)
 

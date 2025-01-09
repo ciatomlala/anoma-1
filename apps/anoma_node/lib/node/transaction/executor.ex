@@ -174,7 +174,7 @@ defmodule Anoma.Node.Transaction.Executor do
 
   @spec handle_launch({Backends.backend(), Noun.t()}, binary(), t()) :: :ok
   defp handle_launch(tw_w_backend, id, state = %Executor{}) do
-    Task.start(fn ->
+    Task.start_link(fn ->
       Backends.execute(state.node_id, tw_w_backend, id)
     end)
 

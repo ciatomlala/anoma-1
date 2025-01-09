@@ -684,7 +684,7 @@ defmodule Anoma.Node.Transaction.Storage do
 
   defp block_spawn(height, call, node_id) do
     {:ok, pid} =
-      Task.start(call)
+      Task.start_link(call)
 
     EventBroker.subscribe(pid, [
       Node.Event.node_filter(node_id),

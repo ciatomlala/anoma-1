@@ -28,7 +28,7 @@ config :event_broker, []
 # rocksdb:         should the rockdb backend be used?
 #                  default: true
 config :anoma_node, :mnesia,
-  persist_to_disk: true,
+  persist_to_disk: false,
   rocksdb: false
 
 # Import environment specific config. This must remain at the bottom
