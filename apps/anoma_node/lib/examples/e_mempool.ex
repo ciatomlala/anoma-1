@@ -191,6 +191,9 @@ defmodule Anoma.Node.Examples.Mempool do
   # Blocks
 
   def complete_transaction(enode \\ ENode.start_node()) do
+    # subscribe to events here to be sure the events are caught
+    EventBroker.subscribe_me([])
+
     # fire a transaction
     {_node, {transaction, id}} = execute_transaction(enode)
 
@@ -215,6 +218,10 @@ defmodule Anoma.Node.Examples.Mempool do
     # - consensus event is fired
     # - order event is fired
     # - execution event is fired
+
+    # wait for the consensus event
+    consensus_event = EEvent.consensus_event(enode, [id])
+    EEvent.wait_for_consensus_event(enode, consensus_event)
   end
 
   ############################################################
