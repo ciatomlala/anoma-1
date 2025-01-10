@@ -34,13 +34,14 @@ defmodule Anoma.Node.Replay.State do
   @spec initial_state(String.t()) :: any()
   def initial_state(node_id) do
     if Tables.existing_tables?(node_id) do
+      nil
     else
       nil
     end
   end
 
-  def storage_arguments(node_id) do
-  end
+  # def storage_arguments(node_id) do
+  # end
 
   @doc """
   Given a node id, I determine if there is existing data for this node.
@@ -64,23 +65,23 @@ defmodule Anoma.Node.Replay.State do
   #                       Helpers                             #
   ############################################################
 
-  @type block_info :: {integer(), integer()}
+  # @type block_info :: {integer(), integer()}
   # @doc """
   # I return all the blocks from the given table.
   # I return a tuple with the latest round and total length of all blocks.
   # """
-  @spec block_info(atom()) :: block_info
-  defp block_info(table) do
-    case :mnesia.match_object({table, :_, :_}) do
-      # no blocks found, return default empty block
-      [] ->
-        [{:ok, -1, []}]
+  # @spec block_info(atom()) :: block_info
+  # defp block_info(table) do
+  #   case :mnesia.match_object({table, :_, :_}) do
+  #     # no blocks found, return default empty block
+  #     [] ->
+  #       [{:ok, -1, []}]
 
-      blocks ->
-        blocks
-    end
-    |> Enum.reduce({nil, 0}, fn {_table, round, block}, {_round, height} ->
-      {round, height + length(block)}
-    end)
-  end
+  #     blocks ->
+  #       blocks
+  #   end
+  #   |> Enum.reduce({nil, 0}, fn {_table, round, block}, {_round, height} ->
+  #     {round, height + length(block)}
+  #   end)
+  # end
 end

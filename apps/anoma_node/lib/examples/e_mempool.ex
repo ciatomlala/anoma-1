@@ -5,9 +5,7 @@ defmodule Anoma.Node.Examples.Mempool do
 
   alias Anoma.Node.Examples.ENode
   alias Anoma.Node.Examples.ETransaction
-  alias Anoma.Node.Transaction.Backends
   alias Anoma.Node.Transaction.Mempool
-  alias Anoma.Node.Registry
   alias Anoma.Node.Examples.EEvent
 
   import ExUnit.Assertions

@@ -173,9 +173,9 @@ defmodule Anoma.Node.Transaction.Executor do
   #                 Genserver Implementation                 #
   ############################################################
 
-  @doc """
-  I launch a transaction in its own Task to execute.
-  """
+  # @doc """
+  # I launch a transaction in its own Task to execute.
+  # """
   @spec handle_launch({Backends.backend(), Noun.t()}, binary(), t()) :: :ok
   defp handle_launch(tw_w_backend, id, state = %Executor{}) do
     tx_supervisor = Registry.via(state.node_id, TxSupervisor)

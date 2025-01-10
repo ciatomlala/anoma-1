@@ -59,7 +59,7 @@ defmodule Anoma.Node.Examples.ELogging do
     :mnesia.subscribe({:table, events_table, :simple})
 
     ids =
-      for i <- 1..5 do
+      for _ <- 1..5 do
         {event, id, code, backend} = random_tx_event(enode.node_id)
         EventBroker.event(event)
 
