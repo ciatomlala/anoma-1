@@ -16,6 +16,7 @@ defmodule Anoma.Node.Transaction.Supervisor do
 
   @impl true
   def init(args) do
+    IO.inspect(args, label: "node_args")
     Process.set_label(__MODULE__)
 
     tx_args = args[:tx_args]
