@@ -12,11 +12,20 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   alias Anoma.Node.Tables
   alias Anoma.Node.Transaction.Mempool
   alias Anoma.Node.Transaction.Backends
+  alias Anoma.Node.Replay.State
+  # @doc """
+  # I test whether a non-existing node has data or not.
+  # """
+  # def storage_state(enode \\ ENode.start_node()) do
+  #   node_id = ENode.random_node_id()
+
+  #   assert State.
+  # end
 
   # def storage_state(enode \\ ENode.start_node()) do
   #   # write a new block to storage to ensure that the table is modified.
+  #   EMempool.complete_transaction(enode)
 
-  #   # start the previous node again.
-  #   ENode.start_node(node_id: enode.node_id, grpc_port: enode.grpc_port)
+  #   #
   # end
 end

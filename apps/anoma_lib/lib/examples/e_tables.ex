@@ -14,6 +14,7 @@ defmodule Anoma.Examples.Tables do
   """
   def check_for_tables() do
     non_existing_node_id = ENode.random_node_id()
-    refute(Tables.existing_tables?(non_existing_node_id))
+    has_tables? = Tables.existing_tables?(non_existing_node_id)
+    refute(has_tables?)
   end
 end

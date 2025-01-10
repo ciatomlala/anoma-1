@@ -177,6 +177,7 @@ defmodule Anoma.Node.Tables do
     end
   end
 
+  @spec existing_tables?(String.t()) :: boolean
   def existing_tables?(node_id) do
     @tables
     |> Enum.map(fn {table, fields} ->
