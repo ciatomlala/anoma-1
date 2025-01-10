@@ -3,15 +3,9 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   I define examples on how the start state of a node is computed.
   """
 
-  alias Anoma.Node.Event
-  alias Anoma.Node.Examples.ELogging
-  alias Anoma.Node.Examples.ETransaction
   alias Anoma.Node.Examples.Mempool, as: EMempool
   alias Anoma.Node.Examples.ENode
-  alias Anoma.Node.Replay
   alias Anoma.Node.Tables
-  alias Anoma.Node.Transaction.Mempool
-  alias Anoma.Node.Transaction.Backends
   alias Anoma.Node.Replay.State
 
   import ExUnit.Assertions
@@ -113,6 +107,42 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
     enode
   end
 
+  @doc """
+  I check whether the mempool arguments for a fresh node are the default arguments.
+  """
+  @spec mempool_args_non_block_transaction(ENode.t()) :: ENode.t()
+  def mempool_args_non_block_transaction(enode \\ ENode.start_node()) do
+    # run a transaction, but do not create a block
+    # this will make sure the transaction is still present in the mempool's tables
+    # and it should be restored.
+    {_node, transaction} = EMempool.add_transaction(enode)
+
+    Process.sleep(1000)
+
+    mempool_start_args =
+      State.mempool_arguments(enode.node_id)
+      |> Keyword.validate(
+        transactions: [],
+        round: 0,
+        consensus: []
+      )
+
+    # assert the arguments are valid
+    assert {:ok, _} = mempool_start_args
+
+    # assert values in the arguments
+    {:ok, mempool_start_args} = mempool_start_args
+
+    assert mempool_start_args[:transactions] == [
+             {transaction.id, {transaction.backend, transaction.noun}}
+           ]
+
+    assert mempool_start_args[:round] == 0
+    assert mempool_start_args[:consensus] == []
+
+    enode
+  end
+
   # -----------------------------------------------------------
   # Storage
 
@@ -142,6 +172,24 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
     storage_start_args = State.storage_arguments(enode.node_id)
 
     assert storage_start_args == [uncommitted_height: 9]
+
+    enode
+  end
+
+  @doc """
+  I check whether the storage arguments for a fresh node are the default arguments.
+  """
+  @spec storage_args_non_block_transaction(ENode.t()) :: ENode.t()
+  def storage_args_non_block_transaction(enode \\ ENode.start_node()) do
+    # run ten separate transactions in a block through the node.
+    EMempool.add_transaction(enode)
+
+    Process.sleep(1000)
+
+    # there should be 10 transactions, and the committed height should be 9.
+    storage_start_args = State.storage_arguments(enode.node_id)
+
+    assert storage_start_args == [uncommitted_height: 0]
 
     enode
   end

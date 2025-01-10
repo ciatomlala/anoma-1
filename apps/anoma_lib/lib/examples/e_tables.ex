@@ -3,8 +3,4 @@ defmodule Anoma.Examples.Tables do
   I define examples on how to use the Tables module to reason about the database
   for nodes.
   """
-
-  alias Anoma.Node.Tables
-
-  import ExUnit.Assertions
 end
