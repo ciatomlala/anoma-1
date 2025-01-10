@@ -160,6 +160,9 @@ defmodule Anoma.Node.Examples.Mempool do
   # -----------------------------------------------------------
   # Blocks
 
+  @spec complete_transaction(Anoma.Node.Examples.ENode.t()) ::
+          {Anoma.Node.Examples.ENode.t(),
+           Anoma.Node.Examples.ETransaction.t()}
   @doc """
   I run a transaction and let it complete.
   I expect a transaction description with the following values:
@@ -170,14 +173,15 @@ defmodule Anoma.Node.Examples.Mempool do
   """
   @spec complete_transaction(
           ENode.t(),
-          ETransaction.t()
+          ETransaction.t(),
+          non_neg_integer()
         ) :: {ENode.t(), ETransaction.t()}
   def complete_transaction(enode \\ ENode.start_node()) do
     transaction = ETransaction.faulty_transaction()
-    complete_transaction(enode, transaction)
+    complete_transaction(enode, transaction, 0)
   end
 
-  def complete_transaction(enode, transaction) do
+  def complete_transaction(enode, transaction, round) do
     # subscribe to events here to be sure the events are caught
     EventBroker.subscribe_me([])
 
@@ -205,6 +209,7 @@ defmodule Anoma.Node.Examples.Mempool do
     # - consensus event is fired
     # - order event is fired
     # - execution event is fired
+    # - block event is fired
 
     # wait for the consensus event
     consensus_event = EEvent.consensus_event(enode, [transaction.id])
@@ -215,10 +220,34 @@ defmodule Anoma.Node.Examples.Mempool do
     EEvent.wait_for_order_event(enode, order_event)
 
     # wait for the execution event
-
     execution_event = EEvent.execution_event(enode, transaction)
     EEvent.wait_for_execution_event(enode, execution_event)
 
+    # wait for the block event
+    block_event = EEvent.block_event(enode, transaction, round)
+    EEvent.wait_for_block_event(enode, block_event)
+
     {enode, transaction}
+  end
+
+  @doc """
+  I run a list of transactions and create a block for each of them.
+  """
+  @spec complete_ten_transactions(ENode.t()) :: ENode.t()
+  @spec complete_ten_transactions(ENode.t(), [ETransaction.t()]) ::
+          ENode.t()
+  def complete_ten_transactions(enode \\ ENode.start_node()) do
+    transactions =
+      Enum.map(1..10, fn _ -> ETransaction.simple_transaction() end)
+
+    complete_ten_transactions(enode, transactions)
+  end
+
+  def complete_ten_transactions(enode, transactions) do
+    for {transaction, round} <- Enum.with_index(transactions) do
+      complete_transaction(enode, transaction, round)
+    end
+
+    enode
   end
 end

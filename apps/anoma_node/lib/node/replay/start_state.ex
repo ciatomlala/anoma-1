@@ -16,6 +16,25 @@ defmodule Anoma.Node.Replay.State do
 
   alias Anoma.Node.Tables
 
+  require Logger
+
+  ############################################################
+  #                       Types                              #
+  ############################################################
+
+  @type storage_args :: [uncommitted_height: non_neg_integer()]
+
+  @type ordering_args :: [next_height: non_neg_integer()]
+
+  @type mempool_args :: [
+          transactions: [any()],
+          round: non_neg_integer(),
+          consensus: [any()]
+        ]
+
+  ############################################################
+  #                       Public                             #
+  ############################################################
   @doc """
   Given a node id, I will determine the startup arguments for the node
   depending on the data found in the database.
@@ -31,18 +50,33 @@ defmodule Anoma.Node.Replay.State do
   #     ],
   #     node_id: "LTU3NjQ2MDc0ODcwMTQ4MzM3NQ=="
   #   ]
-  @spec initial_state(String.t()) :: any()
-  def initial_state(_node_id) do
-    # if Tables.existing_tables?(node_id) do
-    #   nil
-    # else
-    #   nil
-    # end
-    :ok
+
+  @spec storage_arguments(String.t()) :: storage_args
+  def storage_arguments(node_id) do
+    # read the blocks table for this node
+    blocks_table = Tables.table_blocks(node_id)
+    {:ok, blocks_summary} = block_table_summary(blocks_table)
+
+    [uncommitted_height: blocks_summary.last_round]
   end
 
-  # def storage_arguments(node_id) do
-  # end
+  @spec ordering_arguments(binary()) :: ordering_args
+  def ordering_arguments(node_id) do
+    # read the blocks table for this node
+    blocks_table = Tables.table_blocks(node_id)
+    {:ok, blocks_summary} = block_table_summary(blocks_table)
+
+    [next_height: blocks_summary.transaction_count + 1]
+  end
+
+  @spec mempool_arguments(String.t()) :: mempool_args
+  def mempool_arguments(node_id) do
+    # read the blocks table for this node
+    events_table = Tables.table_events(node_id)
+    {:ok, events_summary} = events_table_summary(events_table)
+
+    [transactions: events_summary.transactions]
+  end
 
   @doc """
   Given a node id, I determine if there is existing data for this node.
@@ -66,23 +100,86 @@ defmodule Anoma.Node.Replay.State do
   #                       Helpers                             #
   ############################################################
 
-  # @type block_info :: {integer(), integer()}
-  # @doc """
-  # I return all the blocks from the given table.
-  # I return a tuple with the latest round and total length of all blocks.
-  # """
-  # @spec block_info(atom()) :: block_info
-  # defp block_info(table) do
-  #   case :mnesia.match_object({table, :_, :_}) do
-  #     # no blocks found, return default empty block
-  #     [] ->
-  #       [{:ok, -1, []}]
+  @type block_table_summary :: %{
+          last_round: non_neg_integer,
+          transaction_count: non_neg_integer
+        }
 
-  #     blocks ->
-  #       blocks
-  #   end
-  #   |> Enum.reduce({nil, 0}, fn {_table, round, block}, {_round, height} ->
-  #     {round, height + length(block)}
-  #   end)
-  # end
+  @doc """
+  I return a summary of all the required information from the blocks table.
+  """
+  @spec block_table_summary(atom()) ::
+          {:ok, block_table_summary} | {:error, :failed_to_create_summary}
+  def block_table_summary(table) do
+    :mnesia.transaction(fn ->
+      default_summary = %{last_round: 0, transaction_count: 0}
+
+      case :mnesia.match_object({table, :_, :_}) do
+        # no blocks found, return default empty block
+        [] ->
+          default_summary
+
+        blocks ->
+          blocks
+          |> Enum.reduce(default_summary, fn {_, round, txs}, summary ->
+            summary
+            |> Map.update!(:last_round, &max(round, &1))
+            |> Map.update!(:transaction_count, &(&1 + Enum.count(txs)))
+          end)
+      end
+    end)
+    |> case do
+      {:atomic, summary} ->
+        {:ok, summary}
+
+      _ ->
+        {:error, :failed_to_create_summary}
+    end
+  end
+
+  def events_table_summary(table) do
+    :mnesia.transaction(fn ->
+      default_summary = %{transactions: [], next_round: 0, consensus: []}
+
+      # fetch the list of transactions from the events table
+      # use guard specs to get all values, except the consensus and round values
+      # pattern to destructure every record against
+      matchhead = {:"$1", :"$2", :"$3"}
+
+      # guards to filter out objects we're not interested in
+      # consensus = {:"=:=", :"$2", :consensus}
+      # round = {:"=:=", :"$2", :round}
+      # guards = [not: {:orelse, consensus, round}]
+
+      # values of the result we want to get back
+      result = [{{:"$2", :"$3"}}]
+
+      case :mnesia.select(table, [{matchhead, [], [result]}]) do
+        # no blocks found, return default empty block
+        [] ->
+          default_summary
+
+        data ->
+          data
+          |> Enum.reduce(default_summary, fn
+            [round: round], summary ->
+              Map.put(summary, :round, round + 1)
+
+            [consensus: transaction_ids], summary ->
+              Map.put(summary, :consensus, transaction_ids)
+
+            [{tx_id, tr}], summary ->
+              Map.update!(summary, :transactions, &[{tx_id, tr} | &1])
+          end)
+      end
+    end)
+    |> case do
+      {:atomic, summary} ->
+        {:ok, summary}
+
+      e ->
+        Logger.error(inspect(e))
+        {:error, :failed_to_create_summary}
+    end
+  end
 end

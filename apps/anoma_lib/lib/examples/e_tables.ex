@@ -7,16 +7,4 @@ defmodule Anoma.Examples.Tables do
   alias Anoma.Node.Tables
 
   import ExUnit.Assertions
-
-  @doc """
-  I test that for a non-existing node, no tables exist.
-  """
-  def check_for_tables() do
-    non_existing_node_id =
-      "ENode.random_node_id() is not available because of dependency issues this sucks fix this"
-
-    has_tables? = Tables.existing_tables?(non_existing_node_id)
-    # assert has_tables? == false
-    :ok
-  end
 end

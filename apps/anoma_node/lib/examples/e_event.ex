@@ -75,10 +75,8 @@ defmodule Anoma.Node.Examples.EEvent do
   E.g., {{:ok, [["key" | 0]]}, "id 1"}
         {[error: "id 1"], "id 1"}
   """
-  @spec execution_event(ENode.t()) ::
-          EventBroker.Event.t()
-  @spec execution_event(ENode.t(), ETransaction.t()) ::
-          EventBroker.Event.t()
+  @spec execution_event(ENode.t()) :: EventBroker.Event.t()
+  @spec execution_event(ENode.t(), ETransaction.t()) :: EventBroker.Event.t()
   def execution_event(enode \\ ENode.start_node()) do
     transaction = ETransaction.faulty_transaction()
     execution_event(enode, transaction)
@@ -87,6 +85,26 @@ defmodule Anoma.Node.Examples.EEvent do
   def execution_event(enode, transaction) do
     # create a transaction event
     event = new_execution_event([{transaction.result, transaction.id}])
+
+    Event.new_with_body(enode.node_id, event)
+  end
+
+  @doc """
+  I create a block event for the given transaction id and the given result.
+  The transaction should be a tuple with an id and an expected result.
+  """
+  @spec block_event(ENode.t()) :: EventBroker.Event.t()
+  @spec block_event(ENode.t(), ETransaction.t(), non_neg_integer()) ::
+          EventBroker.Event.t()
+  def block_event(enode \\ ENode.start_node()) do
+    transaction = ETransaction.faulty_transaction()
+    order = 0
+    block_event(enode, transaction, order)
+  end
+
+  def block_event(enode, transaction, order) do
+    # create a transaction event
+    event = new_block_event([transaction.id], order)
 
     Event.new_with_body(enode.node_id, event)
   end
@@ -153,6 +171,22 @@ defmodule Anoma.Node.Examples.EEvent do
   def send_execution_event(enode \\ ENode.start_node(), event \\ nil) do
     # if no event was given, create a default event
     event = if event, do: event, else: execution_event(enode)
+
+    # send the event
+    EventBroker.event(event)
+
+    {enode, event}
+  end
+
+  @doc """
+  I send the block event.
+  If no event was given, I send a default event.
+  """
+  @spec send_block_event(ENode.t(), EventBroker.Event.t() | nil) ::
+          {ENode.t(), EventBroker.Event.t()}
+  def send_block_event(enode \\ ENode.start_node(), event \\ nil) do
+    # if no event was given, create a default event
+    event = if event, do: event, else: block_event(enode)
 
     # send the event
     EventBroker.event(event)
@@ -271,6 +305,33 @@ defmodule Anoma.Node.Examples.EEvent do
                    1000
   end
 
+  @doc """
+  I wait for a specific block event.
+  """
+  def wait_for_block_event(enode \\ ENode.start_node(), event \\ nil) do
+    # subscribe to all events
+    EventBroker.subscribe_me([])
+
+    # if no event was given, create and send one now.
+    event =
+      if event == nil do
+        {_node, event} = send_block_event(enode)
+        event
+      else
+        event
+      end
+
+    # the event will be fired from another module,
+    # so the source_mdoule attribute has to be ignored.
+    expected_body = event.body
+
+    assert_receive %EventBroker.Event{
+                     body: ^expected_body,
+                     source_module: _
+                   },
+                   1000
+  end
+
   ############################################################
   #                       Helpers                            #
   ############################################################
@@ -320,6 +381,19 @@ defmodule Anoma.Node.Examples.EEvent do
   def new_execution_event(results) do
     %Executor.ExecutionEvent{
       result: results
+    }
+  end
+
+  @doc """
+  I create a new block event.
+  For this I need the round of the block as well as the order of the transactions in that block.
+  """
+  @spec new_block_event([String.t()], non_neg_integer()) ::
+          Mempool.BlockEvent.t()
+  def new_block_event(transaction_ids, round) do
+    %Mempool.BlockEvent{
+      order: transaction_ids,
+      round: round
     }
   end
 end

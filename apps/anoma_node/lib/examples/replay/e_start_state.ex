@@ -3,29 +3,178 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   I define examples on how the start state of a node is computed.
   """
 
-  # alias Anoma.Node.Event
-  # alias Anoma.Node.Examples.ELogging
-  # alias Anoma.Node.Examples.ETransaction
-  # alias Anoma.Node.Examples.Mempool, as: EMempool
-  # alias Anoma.Node.Examples.ENode
-  # alias Anoma.Node.Replay
-  # alias Anoma.Node.Tables
-  # alias Anoma.Node.Transaction.Mempool
-  # alias Anoma.Node.Transaction.Backends
-  # alias Anoma.Node.Replay.State
-  # @doc """
-  # I test whether a non-existing node has data or not.
-  # """
-  # def storage_state(enode \\ ENode.start_node()) do
-  #   node_id = ENode.random_node_id()
+  alias Anoma.Node.Event
+  alias Anoma.Node.Examples.ELogging
+  alias Anoma.Node.Examples.ETransaction
+  alias Anoma.Node.Examples.Mempool, as: EMempool
+  alias Anoma.Node.Examples.ENode
+  alias Anoma.Node.Replay
+  alias Anoma.Node.Tables
+  alias Anoma.Node.Transaction.Mempool
+  alias Anoma.Node.Transaction.Backends
+  alias Anoma.Node.Replay.State
 
-  #   assert State.
-  # end
+  import ExUnit.Assertions
 
-  # def storage_state(enode \\ ENode.start_node()) do
-  #   # write a new block to storage to ensure that the table is modified.
-  #   EMempool.complete_transaction(enode)
+  # -----------------------------------------------------------
+  # Table states
 
-  #   #
-  # end
+  @doc """
+  I assert that a node that does not exist does not have any tables present.
+  """
+  @spec no_node_no_tables() :: :ok
+  def no_node_no_tables() do
+    non_existing_node_id =
+      "ENode.random_node_id() is not available because of dependency issues this sucks fix this"
+
+    has_tables? = Tables.has_data?(non_existing_node_id)
+    assert has_tables? == {:error, :none_exist}
+    :ok
+  end
+
+  @doc """
+  I check whether a fresh node has all its tables created.
+  """
+  @spec new_node_has_tables(ENode.t()) :: ENode.t()
+  def new_node_has_tables(enode \\ ENode.start_node()) do
+    has_tables? = Tables.has_data?(enode.node_id)
+    assert has_tables? == {:ok, :exists}
+
+    enode
+  end
+
+  @doc """
+  I check whether a node with some missing tables is marked as partial.
+  """
+  @spec partial_state_if_table_deleted(ENode.t()) :: ENode.t()
+  def partial_state_if_table_deleted(enode \\ ENode.start_node()) do
+    # delete a table for the given node
+    table_to_delete = Tables.table_blocks(enode.node_id)
+
+    {:atomic, :ok} = :mnesia.delete_table(table_to_delete)
+
+    # there are not partial tables left
+    has_tables? = Tables.has_data?(enode.node_id)
+    assert has_tables? == {:error, :partial_exist}
+
+    enode
+  end
+
+  # -----------------------------------------------------------
+  # Mempool
+
+  # @spec mempool_args_empty_node(ENode.t()) :: ENode.t()
+  def mempool_args_fresh_node(enode \\ ENode.start_node()) do
+    # there should be 0 transactions
+    mempool_start_args =
+      State.mempool_arguments(enode.node_id)
+      |> Keyword.validate(
+        transactions: [],
+        round: 0,
+        consensus: []
+      )
+
+    # assert the arguments are valid
+    assert {:ok, _} = mempool_start_args
+
+    # assert values in the arguments
+    {:ok, mempool_start_args} = mempool_start_args
+    assert mempool_start_args[:transactions] == []
+    assert mempool_start_args[:round] == 0
+    assert mempool_start_args[:consensus] == []
+
+    enode
+  end
+
+  # @spec mempool_args_empty_node(ENode.t()) :: ENode.t()
+  def mempool_args_non_fresh_node(enode \\ ENode.start_node()) do
+    # run ten separate transactions in a block through the node.
+    EMempool.complete_ten_transactions(enode)
+
+    Process.sleep(1000)
+
+    mempool_start_args =
+      State.mempool_arguments(enode.node_id)
+      |> Keyword.validate(
+        transactions: [],
+        round: 0,
+        consensus: []
+      )
+
+    # assert the arguments are valid
+    assert {:ok, _} = mempool_start_args
+
+    # assert values in the arguments
+    {:ok, mempool_start_args} = mempool_start_args
+    assert mempool_start_args[:transactions] == []
+    assert mempool_start_args[:round] == 0
+    assert mempool_start_args[:consensus] == []
+
+    enode
+  end
+
+  # -----------------------------------------------------------
+  # Storage
+
+  @spec storage_args_fresh_node() :: Anoma.Node.Examples.ENode.t()
+  @doc """
+  I check whether the storage arguments for a fresh node are the default arguments.
+  """
+  @spec storage_args_fresh_node(ENode.t()) :: ENode.t()
+  def storage_args_fresh_node(enode \\ ENode.start_node()) do
+    # there should be 0 transactions, and the committed height should be 0.
+    storage_start_args = State.storage_arguments(enode.node_id)
+
+    assert storage_start_args == [uncommitted_height: 0]
+
+    enode
+  end
+
+  @doc """
+  I check whether the storage arguments for a fresh node are the default arguments.
+  """
+  @spec storage_args_non_fresh_node(ENode.t()) :: ENode.t()
+  def storage_args_non_fresh_node(enode \\ ENode.start_node()) do
+    # run ten separate transactions in a block through the node.
+    EMempool.complete_ten_transactions(enode)
+
+    # there should be 10 transactions, and the committed height should be 9.
+    storage_start_args = State.storage_arguments(enode.node_id)
+
+    assert storage_start_args == [uncommitted_height: 9]
+
+    enode
+  end
+
+  # -----------------------------------------------------------
+  # Ordering
+
+  @doc """
+  I check whether the ordering arguments for a fresh node are the default arguments.
+  """
+  @spec ordering_args_fresh_node(ENode.t()) :: ENode.t()
+  def ordering_args_fresh_node(enode \\ ENode.start_node()) do
+    # there should be 0 transactions, and the committed height should be 0.
+    ordering_start_args = State.ordering_arguments(enode.node_id)
+
+    assert ordering_start_args == [next_height: 1]
+
+    enode
+  end
+
+  @doc """
+  I check whether the ordering arguments for a fresh node are the default arguments.
+  """
+  @spec ordering_args_non_fresh_node(ENode.t()) :: ENode.t()
+  def ordering_args_non_fresh_node(enode \\ ENode.start_node()) do
+    # run ten separate transactions in a block through the node.
+    EMempool.complete_ten_transactions(enode)
+
+    # there should be 10 transactions, and the committed height should be 9.
+    ordering_start_args = State.ordering_arguments(enode.node_id)
+
+    assert ordering_start_args == [next_height: 11]
+
+    enode
+  end
 end

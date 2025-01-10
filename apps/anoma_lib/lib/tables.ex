@@ -177,12 +177,13 @@ defmodule Anoma.Node.Tables do
     end
   end
 
-  @spec existing_tables(String.t()) ::
-          {:ok, :exists} | {:error, :partial | :none_exist}
-  def existing_tables(node_id) do
+  @spec has_data?(String.t()) ::
+          {:ok, :exists}
+          | {:error, :partial_exist | :none_exist | :failed_to_check_tables}
+  def has_data?(node_id) do
     @tables
-    |> Enum.map(fn {table, fields} ->
-      {node_table_name(node_id, table), fields}
+    |> Enum.map(fn {table, _fields} ->
+      node_table_name(node_id, table)
     end)
     |> tables_exist?()
   end
@@ -198,7 +199,8 @@ defmodule Anoma.Node.Tables do
   multiple times.
   """
   @spec tables_exist?([atom()]) ::
-          {:ok, :exists} | {:error, :partial | :none_exist}
+          {:ok, :exists}
+          | {:error, :partial_exist | :none_exist | :failed_to_check_tables}
   def tables_exist?(table_names) do
     :mnesia.transaction(fn ->
       table_names
@@ -219,7 +221,8 @@ defmodule Anoma.Node.Tables do
       {:atomic, result} ->
         result
 
-      _e ->
+      e ->
+        Logger.error(inspect(e))
         {:error, :failed_to_check_tables}
     end
   end
