@@ -98,7 +98,7 @@ defmodule Anoma.Node.Examples.Mempool do
   I execute this transaction.
   """
   @spec execute_transaction(ENode.t(), ETransaction.t()) ::
-          {ENode.t(), Etransaction.t()}
+          {ENode.t(), ETransaction.t()}
 
   def execute_transaction(enode \\ ENode.start_node()) do
     transaction = ETransaction.faulty_transaction()

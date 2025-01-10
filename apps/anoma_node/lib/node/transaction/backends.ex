@@ -117,7 +117,6 @@ defmodule Anoma.Node.Transaction.Backends do
     env = %Nock{
       scry_function: fn a ->
         Ordering.read(node_id, a)
-        |> tap(fn x -> IO.inspect(x, label: "order") end)
       end
     }
 

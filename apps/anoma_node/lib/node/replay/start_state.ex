@@ -32,12 +32,13 @@ defmodule Anoma.Node.Replay.State do
   #     node_id: "LTU3NjQ2MDc0ODcwMTQ4MzM3NQ=="
   #   ]
   @spec initial_state(String.t()) :: any()
-  def initial_state(node_id) do
-    if Tables.existing_tables?(node_id) do
-      nil
-    else
-      nil
-    end
+  def initial_state(_node_id) do
+    # if Tables.existing_tables?(node_id) do
+    #   nil
+    # else
+    #   nil
+    # end
+    :ok
   end
 
   # def storage_arguments(node_id) do

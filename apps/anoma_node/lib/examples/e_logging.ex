@@ -182,7 +182,7 @@ defmodule Anoma.Node.Examples.ELogging do
   I check that there is no consensus left, and that there are no
   transactions left.
   """
-  @spec check_block_event(ENode.t()) :: {ENode.t(), [String.t()]}
+  @spec check_block_event(ENode.t()) :: {ENode.t(), String.t()}
   def check_block_event(enode \\ ENode.start_node()) do
     {_node, event_id} = check_consensus_event(enode)
 
