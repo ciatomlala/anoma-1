@@ -157,6 +157,14 @@ defmodule Anoma.Node.Examples.Mempool do
     {enode, transactions}
   end
 
+  # -----------------------------------------------------------
+  # Blocks
+
+  def complete_transaction(enode \\ ENode.start_node()) do
+    # fire a transaction
+    {_node, transaction} = execute_error_transaction(enode)
+  end
+
   ############################################################
   #                       Helpers                            #
   ############################################################

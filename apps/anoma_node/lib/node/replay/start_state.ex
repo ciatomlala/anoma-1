@@ -19,9 +19,27 @@ defmodule Anoma.Node.Replay.State do
   @doc """
   Given a node id, I will determine the startup arguments for the node
   depending on the data found in the database.
+
+  If no data exists, nil is returned. There is no initial state.
   """
+
+  # node_args: [
+  #     tx_args: [
+  #       mempool: [transactions: [], round: 0, consensus: []],
+  #       ordering: [next_height: 1],
+  #       storage: [uncommitted_height: 0]
+  #     ],
+  #     node_id: "LTU3NjQ2MDc0ODcwMTQ4MzM3NQ=="
+  #   ]
   @spec initial_state(String.t()) :: any()
   def initial_state(node_id) do
+    if Tables.existing_tables?(node_id) do
+    else
+      nil
+    end
+  end
+
+  def storage_arguments(node_id) do
   end
 
   @doc """
@@ -40,5 +58,29 @@ defmodule Anoma.Node.Replay.State do
       {:error, _e} ->
         {:error, :failed_to_initialize_storage}
     end
+  end
+
+  ############################################################
+  #                       Helpers                             #
+  ############################################################
+
+  @type block_info :: {integer(), integer()}
+  # @doc """
+  # I return all the blocks from the given table.
+  # I return a tuple with the latest round and total length of all blocks.
+  # """
+  @spec block_info(atom()) :: block_info
+  defp block_info(table) do
+    case :mnesia.match_object({table, :_, :_}) do
+      # no blocks found, return default empty block
+      [] ->
+        [{:ok, -1, []}]
+
+      blocks ->
+        blocks
+    end
+    |> Enum.reduce({nil, 0}, fn {_table, round, block}, {_round, height} ->
+      {round, height + length(block)}
+    end)
   end
 end
