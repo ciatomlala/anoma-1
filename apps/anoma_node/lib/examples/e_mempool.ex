@@ -95,152 +95,136 @@ defmodule Anoma.Node.Examples.Mempool do
   # -----------------------------------------------------------
   # Executing transactions
 
-  # @doc """
-  # I add a transaction to the mempool that executes properly.
-  # I execute this transaction.
-  # """
-  # @spec execute_transaction(ENode.t(), Etransaction.t()) ::
-  #         {ENode.t(), Etransaction.t()}
+  @doc """
+  I add a transaction to the mempool that executes properly.
+  I execute this transaction.
+  """
+  @spec execute_transaction(ENode.t(), ETransaction.t()) ::
+          {ENode.t(), Etransaction.t()}
 
-  # def execute_transaction(enode \\ ENode.start_node()) do
-  #   transaction = ETransaction.faulty_transaction()
-  #   execute_transaction(enode, transaction)
-  # end
-
-  # def execute_transaction(enode, transaction) do
-  #   # subscribe to events here to be sure the tx events are caught
-  #   EventBroker.subscribe_me([])
-
-  #   # count the current launched transactions
-  #   tx_count = launched_transactions_count(enode)
-
-  #   # add the transaction to the mempool
-  #   {_enode, _transaction} = add_transaction(enode, transaction)
-
-  #   # adding a transaction to the mempool has two observable effects.
-  #   # - a transaction event should be fired
-  #   # - there should be a new transaction task running in the dynanamic observer.
-
-  #   # check that the event has been fired
-  #   event = EEvent.transaction_event(enode, transaction, transaction_id)
-  #   EEvent.wait_for_transaction_event(enode, event)
-
-  #   # assert there is a task running for this transaction
-  #   assert launched_transactions_count(enode) == tx_count + 1
-
-  #   {enode, {transaction, transaction_id}}
-  # end
-
-  # @doc """
-  # I add a transaction to the mempool that fails when executed.
-  # I execute this transaction.
-  # """
-  # @spec execute_multiple_transactions(ENode.t()) ::
-  #         {ENode.t(), [{transaction, transaction_id}]}
-  # def execute_multiple_transactions(enode \\ ENode.start_node()) do
-  #   # subscribe to events here to be sure the tx events are caught
-  #   EventBroker.subscribe_me([])
-
-  #   # count the current launched transactions
-  #   tx_count = launched_transactions_count(enode)
-
-  #   # add the transaction to the mempool
-  #   {enode, transactions} = add_multiple_transactions(enode)
-
-  #   # adding a transaction to the mempool has two observable effects.
-  #   # - a transaction event should be fired
-  #   # - there should be a new transaction task running in the dynanamic observer.
-
-  #   # check that the event has been fired for each transaction
-  #   for {transaction, transaction_id} <- transactions do
-  #     event = EEvent.transaction_event(enode, transaction, transaction_id)
-  #     EEvent.wait_for_transaction_event(enode, event)
-  #   end
-
-  #   # assert there is a task running for each running transaction
-  #   assert launched_transactions_count(enode) ==
-  #            tx_count + Enum.count(transactions)
-
-  #   {enode, transactions}
-  # end
-
-  # # -----------------------------------------------------------
-  # # Blocks
-
-  # @doc """
-  # I run a transaction and let it complete.
-  # I expect a transaction description with the following values:
-  #  - {backend, noun}: the transaction and noun
-  #  - The expected result of executing the transaction
-  #    E.g., {:ok, {:read_value, [["key" | 0] | 0]}}
-  #  - The id of the transaction
-  # """
-  # # @spec complete_transaction(
-  # #         ENode.t(),
-  # #         {{Backends.backend(), Noun.t()},
-  # #          {:ok, any()} | {:error, String.t()}, String.t()}
-  # #       )
-  # # def complete_transaction(enode \\ ENode.start_node(), transaction \\ nil) do
-  # #   # subscribe to events here to be sure the events are caught
-  # #   EventBroker.subscribe_me([])
-
-  # #   {transaction, result, id} =
-  # #     if transaction == nil do
-  # #       {backend, noun} = ETransaction.trivial_transparent_transaction()
-  # #       result = {:ok, []}
-  # #       id = ETransaction.random_transaction_id()
-  # #       {{backend, noun}, result, id}
-  # #     else
-  # #       transaction
-  # #     end
-
-  # #   # fire a transaction
-  # #   {_node, {transaction, id}} = execute_transaction(enode, transaction)
-
-  # #   # the transaction is currently waiting for an ordering
-  # #   # or it has already executed if it did not scry.
-  # #   #
-  # #   # to ensure that the transaction completes, a consensus event
-  # #   # must be fired. This is done by the consensus engine
-  # #   # by calling Mempool.execute(node, transaction_ids)
-  # #   # there is no consensus in the current branch, so the call is done manually
-  # #   #
-  # #   # The Mempool.execute call will fire a consensus event
-  # #   # and then call the executor to execute the transactions.
-  # #   #
-  # #   # The executor will order the transactions in the consensus
-  # #   # and then wait for all transactions to complete.
-  # #   # After this, an execution event is sent.
-  # #   Mempool.execute(enode.node_id, [id])
-
-  # #   # # to verify that the transaction completed, n observable effects
-  # #   # # must be assertd.
-  # #   # # - consensus event is fired
-  # #   # # - order event is fired
-  # #   # # - execution event is fired
-
-  # #   # # wait for the consensus event
-  # #   # consensus_event = EEvent.consensus_event(enode, [id])
-  # #   # EEvent.wait_for_consensus_event(enode, consensus_event)
-
-  # #   # # wait for the order event
-  # #   # order_event = EEvent.order_event(enode, id)
-  # #   # EEvent.wait_for_order_event(enode, order_event)
-
-  # #   # # wait for the execution event
-  # #   # execution_event = EEvent.execution_event(enode, {})
-  # # end
-
-  # ############################################################
-  # #                       Helpers                            #
-  # ############################################################
-
-  # @doc """
-  # I return the amount of transactions currently running.
-  # """
-  @spec launched_transactions_count(ENode.t()) :: non_neg_integer()
-  defp launched_transactions_count(enode) do
-    tx_supervisor = Registry.via(enode.node_id, TxSupervisor)
-    Enum.count(Task.Supervisor.children(tx_supervisor))
+  def execute_transaction(enode \\ ENode.start_node()) do
+    transaction = ETransaction.faulty_transaction()
+    execute_transaction(enode, transaction)
   end
+
+  def execute_transaction(enode, transaction) do
+    # subscribe to events here to be sure the tx events are caught
+    EventBroker.subscribe_me([])
+
+    # add the transaction to the mempool
+    {_enode, _transaction} = add_transaction(enode, transaction)
+
+    # adding a transaction to the mempool has two observable effects.
+    # - a transaction event should be fired
+    # - there should be a new transaction task running in the dynanamic observer.
+
+    # check that the event has been fired
+    event = EEvent.transaction_event(enode, transaction)
+    EEvent.wait_for_transaction_event(enode, event)
+
+    {enode, transaction}
+  end
+
+  @doc """
+  I add a transaction to the mempool that fails when executed.
+  I execute this transaction.
+  """
+  @spec execute_multiple_transactions(ENode.t()) ::
+          {ENode.t(), [ETransaction.t()]}
+
+  def execute_multiple_transactions(enode \\ ENode.start_node()) do
+    transactions =
+      Enum.map(1..10, fn _ -> ETransaction.simple_transaction() end)
+
+    execute_multiple_transactions(enode, transactions)
+  end
+
+  def execute_multiple_transactions(enode, transactions) do
+    # subscribe to events here to be sure the tx events are caught
+    EventBroker.subscribe_me([])
+
+    # add the transaction to the mempool
+    {enode, transactions} = add_multiple_transactions(enode, transactions)
+
+    # adding a transaction to the mempool has two observable effects.
+    # - a transaction event should be fired
+    # - there should be a new transaction task running in the dynanamic observer.
+
+    # check that the event has been fired for each transaction
+    for transaction <- transactions do
+      event = EEvent.transaction_event(enode, transaction)
+      EEvent.wait_for_transaction_event(enode, event)
+    end
+
+    {enode, transactions}
+  end
+
+  # -----------------------------------------------------------
+  # Blocks
+
+  @doc """
+  I run a transaction and let it complete.
+  I expect a transaction description with the following values:
+   - {backend, noun}: the transaction and noun
+   - The expected result of executing the transaction
+     E.g., {:ok, {:read_value, [["key" | 0] | 0]}}
+   - The id of the transaction
+  """
+  @spec complete_transaction(
+          ENode.t(),
+          ETransaction.t()
+        ) :: {ENode.t(), ETransaction.t()}
+  def complete_transaction(enode \\ ENode.start_node()) do
+    transaction = ETransaction.faulty_transaction()
+    complete_transaction(enode, transaction)
+  end
+
+  def complete_transaction(enode, transaction) do
+    # subscribe to events here to be sure the events are caught
+    EventBroker.subscribe_me([])
+
+    # fire a transaction
+    {_node, _transaction} = execute_transaction(enode, transaction)
+
+    # the transaction is currently waiting for an ordering
+    # or it has already executed if it did not scry.
+    #
+    # to ensure that the transaction completes, a consensus event
+    # must be fired. This is done by the consensus engine
+    # by calling Mempool.execute(node, transaction_ids)
+    # there is no consensus in the current branch, so the call is done manually
+    #
+    # The Mempool.execute call will fire a consensus event
+    # and then call the executor to execute the transactions.
+    #
+    # The executor will order the transactions in the consensus
+    # and then wait for all transactions to complete.
+    # After this, an execution event is sent.
+    Mempool.execute(enode.node_id, [transaction.id])
+
+    # to verify that the transaction completed, n observable effects
+    # must be assertd.
+    # - consensus event is fired
+    # - order event is fired
+    # - execution event is fired
+
+    # wait for the consensus event
+    consensus_event = EEvent.consensus_event(enode, [transaction.id])
+    EEvent.wait_for_consensus_event(enode, consensus_event)
+
+    # wait for the order event
+    order_event = EEvent.order_event(enode, transaction.id)
+    EEvent.wait_for_order_event(enode, order_event)
+
+    # wait for the execution event
+
+    execution_event = EEvent.execution_event(enode, transaction)
+    EEvent.wait_for_execution_event(enode, execution_event)
+
+    IO.puts(transaction.id)
+  end
+
+  ############################################################
+  #                       Helpers                            #
+  ############################################################
 end

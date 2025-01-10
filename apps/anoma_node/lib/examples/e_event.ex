@@ -75,7 +75,9 @@ defmodule Anoma.Node.Examples.EEvent do
   E.g., {{:ok, [["key" | 0]]}, "id 1"}
         {[error: "id 1"], "id 1"}
   """
-  @spec execution_event(ENode.t(), {any(), String.t()} | nil) ::
+  @spec execution_event(ENode.t()) ::
+          EventBroker.Event.t()
+  @spec execution_event(ENode.t(), ETransaction.t()) ::
           EventBroker.Event.t()
   def execution_event(enode \\ ENode.start_node()) do
     transaction = ETransaction.faulty_transaction()
@@ -84,7 +86,7 @@ defmodule Anoma.Node.Examples.EEvent do
 
   def execution_event(enode, transaction) do
     # create a transaction event
-    event = new_execution_event([{transaction.id, transaction.result}])
+    event = new_execution_event([{transaction.result, transaction.id}])
 
     Event.new_with_body(enode.node_id, event)
   end

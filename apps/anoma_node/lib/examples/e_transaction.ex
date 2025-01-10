@@ -337,14 +337,13 @@ defmodule Anoma.Node.Examples.ETransaction do
   """
   @spec simple_transaction(String.t()) :: __MODULE__.t()
   def simple_transaction(id \\ random_transaction_id()) do
-    {backend, noun} =
-      trivial_transparent_transaction()
+    {backend, noun} = trivial_transparent_transaction_no_eph()
 
     %__MODULE__{
       id: id,
       backend: backend,
       noun: noun,
-      result: {:ok, nil}
+      result: :error
     }
   end
 
@@ -357,7 +356,7 @@ defmodule Anoma.Node.Examples.ETransaction do
       id: id,
       backend: :debug_term_storage,
       noun: [0 | 0],
-      result: {:ok, nil}
+      result: :error
     }
   end
 
