@@ -5,6 +5,8 @@ defmodule Anoma.Node.Transaction.Supervisor do
 
   use Supervisor
 
+  alias Anoma.Node.Registry
+
   @spec start_link(list({:node_id, String.t()} | {:tx_args, any()})) ::
           GenServer.on_start()
   def start_link(args) do
@@ -19,6 +21,7 @@ defmodule Anoma.Node.Transaction.Supervisor do
     tx_args = args[:tx_args]
 
     children = [
+      {Task.Supervisor, name: Registry.via(args[:node_id], TxSupervisor)},
       {Anoma.Node.Transaction.Executor, [node_id: args[:node_id]]},
       {Anoma.Node.Transaction.Ordering,
        [node_id: args[:node_id]] ++ tx_args[:ordering]},

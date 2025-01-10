@@ -173,9 +173,14 @@ defmodule Anoma.Node.Transaction.Executor do
   #                 Genserver Implementation                 #
   ############################################################
 
+  @doc """
+  I launch a transaction in its own Task to execute.
+  """
   @spec handle_launch({Backends.backend(), Noun.t()}, binary(), t()) :: :ok
   defp handle_launch(tw_w_backend, id, state = %Executor{}) do
-    Task.start_link(fn ->
+    tx_supervisor = Registry.via(state.node_id, TxSupervisor)
+
+    Task.Supervisor.start_child(tx_supervisor, fn ->
       Backends.execute(state.node_id, tw_w_backend, id)
     end)
 
@@ -211,7 +216,6 @@ defmodule Anoma.Node.Transaction.Executor do
           }
         }
       } ->
-        Logger.error("transaction result: #{inspect({res, id})}")
         {res, id}
     after
       5000 -> raise "Timeout waiting for #{inspect(id)}"

@@ -11,8 +11,10 @@ defmodule Anoma.Node.Examples.EReplay do
   alias Anoma.Node.Replay
   alias Anoma.Node.Tables
   alias Anoma.Node.Transaction.Mempool
+  alias Anoma.Node.Transaction.Backends
 
   import ExUnit.Assertions
+  import Mock
 
   use EventBroker.WithSubscription
 
@@ -40,6 +42,12 @@ defmodule Anoma.Node.Examples.EReplay do
   def replay_with_transaction(enode \\ ENode.start_node()) do
     # insert a transaction into the mempool
     {_node, _transaction} = EMempool.add_transaction(enode)
+
+    # mock the backends implementation to crash whenever a transaction is evaluated
+    execute_fn = fn _node_id, _tx, _id -> raise "All broken" end
+
+    with_mock Backends, execute: execute_fn do
+    end
 
     # assert replay works for this node.
     replay_succeeds(enode)
