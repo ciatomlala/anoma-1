@@ -70,6 +70,9 @@ defmodule Anoma.Node.Tables do
   @doc """
   I initialize the tables for a given node id.
   I do this by creating all tables in the mnesia storage.
+
+  I return information whether these tables did not exist, were created,
+  or when I failed to create them.
   """
   @spec initialize_tables_for_node(String.t()) ::
           {:ok, :existing | :created} | {:error, :failed_to_initialize_tables}
@@ -174,9 +177,67 @@ defmodule Anoma.Node.Tables do
     end
   end
 
+  def existing_tables?(node_id) do
+    @tables
+    |> Enum.map(fn {table, fields} ->
+      {node_table_name(node_id, table), fields}
+    end)
+    |> tables_exist?()
+  end
+
   ############################################################
   #                  Private Helpers                         #
   ############################################################
+
+  @doc """
+  Check if a given list of tables exists.
+
+  This function takes a list of tables to avoid waiting for tables
+  multiple times.
+  """
+  @spec tables_exist?([atom()]) ::
+          {:ok, :exists} | {:error, :partial | :none_exist}
+  def tables_exist?(table_names) do
+    :mnesia.transaction(fn ->
+      table_names
+      |> Enum.reject(&table_exists?/1)
+      |> case do
+        [] ->
+          {:ok, :exists}
+
+        non_existing ->
+          if Enum.count(non_existing) == Enum.count(table_names) do
+            {:error, :none_exist}
+          else
+            {:error, :partial_exist}
+          end
+      end
+    end)
+    |> case do
+      {:atomic, result} ->
+        result
+
+      e ->
+        {:error, :failed_to_check_tables}
+    end
+  end
+
+  @doc """
+  Check if the given table name exists.
+
+  Run inside transaction.
+  """
+  @spec table_exists?(atom()) :: boolean
+  def table_exists?(table) do
+    try do
+      # this call raises if the table does not exist.
+      :mnesia.table_info(table, :all)
+      true
+    catch
+      :exit, {:aborted, {:no_exists, ^table, :all}} ->
+        false
+    end
+  end
 
   # @doc """
   # I create a table with the given name, scoped to a specific node.
