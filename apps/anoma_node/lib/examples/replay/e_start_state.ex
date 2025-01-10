@@ -13,5 +13,10 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   alias Anoma.Node.Transaction.Mempool
   alias Anoma.Node.Transaction.Backends
 
-  def
+  # def storage_state(enode \\ ENode.start_node()) do
+  #   # write a new block to storage to ensure that the table is modified.
+
+  #   # start the previous node again.
+  #   ENode.start_node(node_id: enode.node_id, grpc_port: enode.grpc_port)
+  # end
 end

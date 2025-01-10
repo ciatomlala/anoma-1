@@ -125,6 +125,36 @@ defmodule Anoma.Node.Examples.Mempool do
   end
 
   @doc """
+  I add a transaction to the mempool that executes properly.
+  I execute this transaction.
+  """
+  @spec execute_transaction(ENode.t()) ::
+          {ENode.t(), {transaction, transaction_id}}
+  def execute_transaction(enode \\ ENode.start_node()) do
+    # subscribe to events here to be sure the tx events are caught
+    EventBroker.subscribe_me([])
+
+    # count the current launched transactions
+    tx_count = launched_transactions_count(enode)
+
+    # add the transaction to the mempool
+    {enode, {transaction, transaction_id}} = add_transaction(enode)
+
+    # adding a transaction to the mempool has two observable effects.
+    # - a transaction event should be fired
+    # - there should be a new transaction task running in the dynanamic observer.
+
+    # check that the event has been fired
+    event = EEvent.transaction_event(enode, transaction, transaction_id)
+    EEvent.wait_for_transaction_event(enode, event)
+
+    # assert there is a task running for this transaction
+    assert launched_transactions_count(enode) == tx_count + 1
+
+    {enode, {transaction, transaction_id}}
+  end
+
+  @doc """
   I add a transaction to the mempool that fails when executed.
   I execute this transaction.
   """
@@ -162,7 +192,29 @@ defmodule Anoma.Node.Examples.Mempool do
 
   def complete_transaction(enode \\ ENode.start_node()) do
     # fire a transaction
-    {_node, transaction} = execute_error_transaction(enode)
+    {_node, {transaction, id}} = execute_transaction(enode)
+
+    # the transaction is currently waiting for an ordering
+    # or it has already executed if it did not scry.
+    #
+    # to ensure that the transaction completes, a consensus event
+    # must be fired. This is done by the consensus engine
+    # by calling Mempool.execute(node, transaction_ids)
+    # there is no consensus in the current branch, so the call is done manually
+    #
+    # The Mempool.execute call will fire a consensus event
+    # and then call the executor to execute the transactions.
+    #
+    # The executor will order the transactions in the consensus
+    # and then wait for all transactions to complete.
+    # After this, an execution event is sent.
+    Mempool.execute(enode.node_id, [id])
+
+    # to verify that the transaction completed, n observable effects
+    # must be assertd.
+    # - consensus event is fired
+    # - order event is fired
+    # - execution event is fired
   end
 
   ############################################################

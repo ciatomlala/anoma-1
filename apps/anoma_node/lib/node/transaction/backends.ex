@@ -114,7 +114,13 @@ defmodule Anoma.Node.Transaction.Backends do
              node_id: String.t(),
              back: backend()
   def execute(node_id, {backend, tx_code}, id) do
-    env = %Nock{scry_function: fn a -> Ordering.read(node_id, a) end}
+    env = %Nock{
+      scry_function: fn a ->
+        Ordering.read(node_id, a)
+        |> tap(fn x -> IO.inspect(x, label: "order") end)
+      end
+    }
+
     vm_result = vm_execute(tx_code, env, id)
     result_event(id, vm_result, node_id, backend)
 
