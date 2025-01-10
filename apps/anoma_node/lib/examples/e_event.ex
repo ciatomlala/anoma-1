@@ -25,22 +25,17 @@ defmodule Anoma.Node.Examples.EEvent do
   # @doc """
   # I create a transaction event
   # """
-  @spec transaction_event(
-          ENode.t(),
-          {Backends.backend(), Noun.t()} | nil,
-          String.t() | nil
-        ) ::
+  @spec transaction_event(ENode.t(), ETransaction.t()) ::
           EventBroker.Event.t()
-  def transaction_event(enode \\ ENode.start_node(), tx \\ nil, id \\ nil) do
-    # create a random transaction if none was given.
-    {backend, noun} =
-      if tx, do: tx, else: ETransaction.trivial_transparent_transaction()
+  def transaction_event(enode \\ ENode.start_node()) do
+    transaction = ETransaction.simple_transaction()
+    transaction_event(enode, transaction)
+  end
 
-    # create a random id if none was given.
-    id = if id, do: id, else: ETransaction.random_transaction_id()
-
+  def transaction_event(enode, transaction) do
     # create a transaction event
-    event = new_tx_event({backend, noun}, id)
+    event =
+      new_tx_event({transaction.backend, transaction.noun}, transaction.id)
 
     Event.new_with_body(enode.node_id, event)
   end
@@ -82,16 +77,14 @@ defmodule Anoma.Node.Examples.EEvent do
   """
   @spec execution_event(ENode.t(), {any(), String.t()} | nil) ::
           EventBroker.Event.t()
-  def execution_event(enode \\ ENode.start_node(), transaction \\ nil) do
-    {transaction_id, transaction_result} =
-      if transaction do
-        transaction
-      else
-        {{:ok, [["key" | 0]]}, ETransaction.random_transaction_id()}
-      end
+  def execution_event(enode \\ ENode.start_node()) do
+    transaction = ETransaction.faulty_transaction()
+    execution_event(enode, transaction)
+  end
 
+  def execution_event(enode, transaction) do
     # create a transaction event
-    event = new_execution_event([{transaction_id, transaction_result}])
+    event = new_execution_event([{transaction.id, transaction.result}])
 
     Event.new_with_body(enode.node_id, event)
   end

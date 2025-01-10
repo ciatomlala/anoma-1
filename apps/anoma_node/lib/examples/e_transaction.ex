@@ -10,6 +10,19 @@ defmodule Anoma.Node.Examples.ETransaction do
   require ExUnit.Assertions
   import ExUnit.Assertions
 
+  use TypedStruct
+
+  ############################################################
+  #                    Context                               #
+  ############################################################
+
+  typedstruct do
+    field(:id, String.t())
+    field(:backend, atom())
+    field(:noun, Noun.t())
+    field(:result, any())
+  end
+
   ############################################################
   #                          Storage                         #
   ############################################################
@@ -320,11 +333,32 @@ defmodule Anoma.Node.Examples.ETransaction do
   end
 
   @doc """
-  I define a transaction that cannot be executed and errors.
+  I return an ETransaction struct that holds an example transaction.
   """
-  @spec faulty_transaction() :: {Backends.backend(), Noun.t()}
-  def faulty_transaction() do
-    {:debug_term_storage, [0 | 0]}
+  @spec simple_transaction(String.t()) :: __MODULE__.t()
+  def simple_transaction(id \\ random_transaction_id()) do
+    {backend, noun} =
+      trivial_transparent_transaction()
+
+    %__MODULE__{
+      id: id,
+      backend: backend,
+      noun: noun,
+      result: {:ok, nil}
+    }
+  end
+
+  @doc """
+  I return an ETransaction struct that holds an example transaction.
+  """
+  @spec faulty_transaction(String.t()) :: __MODULE__.t()
+  def faulty_transaction(id \\ random_transaction_id()) do
+    %__MODULE__{
+      id: id,
+      backend: :debug_term_storage,
+      noun: [0 | 0],
+      result: {:ok, nil}
+    }
   end
 
   ############################################################
