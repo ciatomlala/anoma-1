@@ -221,10 +221,6 @@ defmodule Anoma.Node.Examples.Mempool do
     execution_event = EEvent.execution_event(enode, transaction)
     EEvent.wait_for_execution_event(enode, execution_event)
 
-    IO.puts(transaction.id)
+    {enode, transaction}
   end
-
-  ############################################################
-  #                       Helpers                            #
-  ############################################################
 end
