@@ -62,7 +62,4 @@ defmodule Anoma.Node.Supervisor do
 
     Supervisor.init(children, strategy: :one_for_all)
   end
-
-  defp startup_arguments(node_id) do
-  end
 end

@@ -88,6 +88,7 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
     enode
   end
 
+  @spec mempool_args_non_block_transaction() :: Anoma.Node.Examples.ENode.t()
   @doc """
   I check whether the mempool arguments for a fresh node are the default arguments.
   """
