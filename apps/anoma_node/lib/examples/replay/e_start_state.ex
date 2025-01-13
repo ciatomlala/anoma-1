@@ -80,17 +80,11 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
 
   @doc """
   I start up a new node, or assume the given node is empty.
-
   I add a transaction to the mempool.
-
   The startup arguments for this mempool should contain the transaction I added.
   """
   @spec mempool_args_non_block_transaction(ENode.t()) :: ENode.t()
   def mempool_args_non_block_transaction(enode \\ ENode.start_node()) do
-    # subscribe to mnesia events as well. see below.
-    events_table = Tables.table_events(enode.node_id)
-    :mnesia.subscribe({:table, events_table, :simple})
-
     # run a transaction, but do not create a block
     # this will make sure the transaction is still present in the mempool's tables
     # and it should be restored.

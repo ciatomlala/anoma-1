@@ -28,6 +28,11 @@ defmodule Anoma.Node.Examples.Mempool do
   end
 
   def add_transaction(enode, transaction) do
+    # subscribe to mnesia events to capture when the transaction
+    # is written to the mempool.
+    events_table = Tables.table_events(enode.node_id)
+    :mnesia.subscribe({:table, events_table, :simple})
+
     # submit the transaction to the mempool.
     Mempool.tx(
       enode.node_id,
@@ -39,6 +44,9 @@ defmodule Anoma.Node.Examples.Mempool do
     # note: we cannot assert that it is the only transaction, because
     # this example is reused below.
     transactions = Mempool.tx_dump(enode.node_id)
+
+    # wait for the transaction to be present in the events table, too.
+    wait_for_transaction_in_table(enode, transaction)
 
     assert transaction.id in transactions
 
