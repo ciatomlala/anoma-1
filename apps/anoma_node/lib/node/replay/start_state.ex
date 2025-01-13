@@ -57,17 +57,15 @@ defmodule Anoma.Node.Replay.State do
   #   ]
   """
   @spec startup_arguments(String.t()) :: {:ok, startup_args}
-  def(startup_arguments(node_id)) do
+  def startup_arguments(node_id) do
     with {:ok, storage} <- storage_arguments(node_id),
          {:ok, ordering} <- ordering_arguments(node_id),
          {:ok, mempool} <- mempool_arguments(node_id) do
       {:ok,
        [
-         tx_args: [
-           mempool: mempool,
-           ordering: ordering,
-           storage: storage
-         ]
+         mempool: mempool,
+         ordering: ordering,
+         storage: storage
        ]}
     end
   end
