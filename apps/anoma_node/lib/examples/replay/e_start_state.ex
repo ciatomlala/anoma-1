@@ -37,6 +37,7 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
     enode
   end
 
+  @spec partial_state_if_table_deleted() :: Anoma.Node.Examples.ENode.t()
   @doc """
   I check whether a node with some missing tables is marked as partial.
   """
@@ -60,19 +61,9 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   # @spec mempool_args_empty_node(ENode.t()) :: ENode.t()
   def mempool_args_fresh_node(enode \\ ENode.start_node()) do
     # there should be 0 transactions
-    mempool_start_args =
-      State.mempool_arguments(enode.node_id)
-      |> Keyword.validate(
-        transactions: [],
-        round: 0,
-        consensus: []
-      )
-
-    # assert the arguments are valid
-    assert {:ok, _} = mempool_start_args
+    {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
 
     # assert values in the arguments
-    {:ok, mempool_start_args} = mempool_start_args
     assert mempool_start_args[:transactions] == []
     assert mempool_start_args[:round] == 0
     assert mempool_start_args[:consensus] == []
@@ -87,19 +78,9 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
 
     Process.sleep(1000)
 
-    mempool_start_args =
-      State.mempool_arguments(enode.node_id)
-      |> Keyword.validate(
-        transactions: [],
-        round: 0,
-        consensus: []
-      )
-
-    # assert the arguments are valid
-    assert {:ok, _} = mempool_start_args
+    {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
 
     # assert values in the arguments
-    {:ok, mempool_start_args} = mempool_start_args
     assert mempool_start_args[:transactions] == []
     assert mempool_start_args[:round] == 0
     assert mempool_start_args[:consensus] == []
@@ -119,19 +100,7 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
 
     Process.sleep(1000)
 
-    mempool_start_args =
-      State.mempool_arguments(enode.node_id)
-      |> Keyword.validate(
-        transactions: [],
-        round: 0,
-        consensus: []
-      )
-
-    # assert the arguments are valid
-    assert {:ok, _} = mempool_start_args
-
-    # assert values in the arguments
-    {:ok, mempool_start_args} = mempool_start_args
+    {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
 
     assert mempool_start_args[:transactions] == [
              {transaction.id, {transaction.backend, transaction.noun}}
@@ -153,7 +122,7 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   @spec storage_args_fresh_node(ENode.t()) :: ENode.t()
   def storage_args_fresh_node(enode \\ ENode.start_node()) do
     # there should be 0 transactions, and the committed height should be 0.
-    storage_start_args = State.storage_arguments(enode.node_id)
+    {:ok, storage_start_args} = State.storage_arguments(enode.node_id)
 
     assert storage_start_args == [uncommitted_height: 0]
 
@@ -169,7 +138,7 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
     EMempool.complete_ten_transactions(enode)
 
     # there should be 10 transactions, and the committed height should be 9.
-    storage_start_args = State.storage_arguments(enode.node_id)
+    {:ok, storage_start_args} = State.storage_arguments(enode.node_id)
 
     assert storage_start_args == [uncommitted_height: 9]
 
@@ -186,8 +155,8 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
 
     Process.sleep(1000)
 
-    # there should be 10 transactions, and the committed height should be 9.
-    storage_start_args = State.storage_arguments(enode.node_id)
+    # there should be 10 transactions, and the committed height should be 0.
+    {:ok, storage_start_args} = State.storage_arguments(enode.node_id)
 
     assert storage_start_args == [uncommitted_height: 0]
 
@@ -203,7 +172,7 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   @spec ordering_args_fresh_node(ENode.t()) :: ENode.t()
   def ordering_args_fresh_node(enode \\ ENode.start_node()) do
     # there should be 0 transactions, and the committed height should be 0.
-    ordering_start_args = State.ordering_arguments(enode.node_id)
+    {:ok, ordering_start_args} = State.ordering_arguments(enode.node_id)
 
     assert ordering_start_args == [next_height: 1]
 
@@ -219,7 +188,7 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
     EMempool.complete_ten_transactions(enode)
 
     # there should be 10 transactions, and the committed height should be 9.
-    ordering_start_args = State.ordering_arguments(enode.node_id)
+    {:ok, ordering_start_args} = State.ordering_arguments(enode.node_id)
 
     assert ordering_start_args == [next_height: 11]
 

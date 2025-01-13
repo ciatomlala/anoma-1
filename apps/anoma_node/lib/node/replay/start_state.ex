@@ -32,6 +32,12 @@ defmodule Anoma.Node.Replay.State do
           consensus: [any()]
         ]
 
+  @type startup_args :: [
+          mempool: mempool_args,
+          storage: storage_args,
+          ordering: ordering_args
+        ]
+
   ############################################################
   #                       Public                             #
   ############################################################
@@ -40,7 +46,6 @@ defmodule Anoma.Node.Replay.State do
   depending on the data found in the database.
 
   If no data exists, nil is returned. There is no initial state.
-  """
 
   # node_args: [
   #     tx_args: [
@@ -50,32 +55,49 @@ defmodule Anoma.Node.Replay.State do
   #     ],
   #     node_id: "LTU3NjQ2MDc0ODcwMTQ4MzM3NQ=="
   #   ]
+  """
+  @spec startup_arguments(String.t()) :: {:ok, startup_args}
+  def(startup_arguments(node_id)) do
+    with {:ok, storage} <- storage_arguments(node_id),
+         {:ok, ordering} <- ordering_arguments(node_id),
+         {:ok, mempool} <- mempool_arguments(node_id) do
+      {:ok,
+       [
+         tx_args: [
+           mempool: mempool,
+           ordering: ordering,
+           storage: storage
+         ]
+       ]}
+    end
+  end
 
-  @spec storage_arguments(String.t()) :: storage_args
+  @spec storage_arguments(String.t()) :: {:ok, storage_args}
   def storage_arguments(node_id) do
     # read the blocks table for this node
     blocks_table = Tables.table_blocks(node_id)
     {:ok, blocks_summary} = block_table_summary(blocks_table)
 
-    [uncommitted_height: blocks_summary.last_round]
+    {:ok, [uncommitted_height: blocks_summary.last_round]}
   end
 
-  @spec ordering_arguments(binary()) :: ordering_args
+  @spec ordering_arguments(binary()) :: {:ok, ordering_args}
   def ordering_arguments(node_id) do
     # read the blocks table for this node
     blocks_table = Tables.table_blocks(node_id)
     {:ok, blocks_summary} = block_table_summary(blocks_table)
 
-    [next_height: blocks_summary.transaction_count + 1]
+    {:ok, [next_height: blocks_summary.transaction_count + 1]}
   end
 
-  @spec mempool_arguments(String.t()) :: mempool_args
+  @spec mempool_arguments(String.t()) :: {:ok, mempool_args}
   def mempool_arguments(node_id) do
     # read the blocks table for this node
     events_table = Tables.table_events(node_id)
     {:ok, events_summary} = events_table_summary(events_table)
 
-    [transactions: events_summary.transactions]
+    {:ok,
+     [transactions: events_summary.transactions, round: 0, consensus: []]}
   end
 
   @doc """
