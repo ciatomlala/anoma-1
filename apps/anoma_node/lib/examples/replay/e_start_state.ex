@@ -3,12 +3,14 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   I define examples on how the start state of a node is computed.
   """
 
-  alias Anoma.Node.Examples.Mempool, as: EMempool
   alias Anoma.Node.Examples.ENode
-  alias Anoma.Node.Tables
+  alias Anoma.Node.Examples.Mempool, as: EMempool
   alias Anoma.Node.Replay.State
+  alias Anoma.Node.Tables
+  alias Anoma.Node.Transaction.Executor
 
   import ExUnit.Assertions
+  import Mock
 
   # -----------------------------------------------------------
   # Table states
@@ -85,13 +87,17 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   """
   @spec mempool_args_non_block_transaction(ENode.t()) :: ENode.t()
   def mempool_args_non_block_transaction(enode \\ ENode.start_node()) do
+    # subscribe to mnesia events as well. see below.
+    events_table = Tables.table_events(enode.node_id)
+    :mnesia.subscribe({:table, events_table, :simple})
+
     # run a transaction, but do not create a block
     # this will make sure the transaction is still present in the mempool's tables
     # and it should be restored.
     {_node, transaction} = EMempool.add_transaction(enode)
 
-    # todo this has to go
-    Process.sleep(1000)
+    # wait for the transaction to be written in the events table
+    EMempool.wait_for_transaction_in_table(enode, transaction)
 
     # compute the mempool startup arguments
     {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
@@ -116,6 +122,10 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   """
   @spec mempool_args_non_block_transactions(ENode.t()) :: ENode.t()
   def mempool_args_non_block_transactions(enode \\ ENode.start_node()) do
+    # subscribe to mnesia events as well. see below.
+    events_table = Tables.table_events(enode.node_id)
+    :mnesia.subscribe({:table, events_table, :simple})
+
     # run 10 transactions, but do not create a block
     # this will make sure the transactions are still present in the mempool's tables
     # and they should be restored.
@@ -125,15 +135,11 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
         {transaction.id, {transaction.backend, transaction.noun}}
       end
 
-    # todo this has to go
-    Process.sleep(1000)
-
     # compute the mempool startup arguments
     {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
 
     # assert the transaction I just added is in the list of the startup arguments.
     assert mempool_start_args[:transactions] -- transaction_list == []
-
     assert mempool_start_args[:round] == 0
     assert mempool_start_args[:consensus] == []
 
@@ -147,9 +153,12 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
 
   When I compute the startup arguments for this node's mempool, I expect to have the default arguments.
   """
-
   @spec mempool_args_non_fresh_node(ENode.t()) :: ENode.t()
   def mempool_args_non_fresh_node(enode \\ ENode.start_node()) do
+    # subscribe to mnesia events as well. see below.
+    events_table = Tables.table_events(enode.node_id)
+    :mnesia.subscribe({:table, events_table, :simple})
+
     # run ten separate transactions in a block through the node.
     EMempool.complete_ten_transactions(enode)
 
@@ -161,6 +170,57 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
     assert mempool_start_args[:transactions] == []
     assert mempool_start_args[:round] == 0
     assert mempool_start_args[:consensus] == []
+
+    enode
+  end
+
+  @doc """
+  I start up a new node, or assume the given node is empty.
+
+  I add a number of transactions to the mempool.
+  """
+  def mempool_consensi_present(enode \\ ENode.start_node()) do
+    # When a transaction is added to the mempool, and a consensus process
+    # calls the Mempool.execute([transactions]) function, the following happens.
+    # - Mempool will fire a consensus event
+    # - Mempool will call Executor.execute for the given transactions.
+    # - The logging engine will write the order into the events table.
+    #
+    # This example does not want the Executor.execute call to happen, so it
+    # is mocked out.
+    # Removing that function effectively causes the transactions to never be executed.
+    #
+    # The logging engine might still be writing after the consensus event has been fired,
+    # so I wait for an mnesia event to be sure the table has been written.
+    with_mock Executor, [:passthrough], execute: fn _, _ -> :ok end do
+      EventBroker.subscribe_me([])
+
+      # subscribe to mnesia events as well. see below.
+      events_table = Tables.table_events(enode.node_id)
+      :mnesia.subscribe({:table, events_table, :simple})
+
+      # start creating a block with a single transaction.
+      {_enode, transaction} = EMempool.make_block(enode)
+
+      # wait for the mnesia table to be written fully
+      EMempool.wait_for_consensus_write(enode, transaction)
+
+      # compute the mempool arguments.
+      # expect that the consensus contains one element
+      {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
+
+      # assert values in the arguments
+      expected_transactions = [
+        {transaction.id, {transaction.backend, transaction.noun}}
+      ]
+
+      assert mempool_start_args[:transactions] == expected_transactions
+      assert mempool_start_args[:round] == 0
+
+      expected_consensus = [[transaction.id]]
+
+      assert mempool_start_args[:consensus] == expected_consensus
+    end
 
     enode
   end

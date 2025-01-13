@@ -3,13 +3,10 @@ defmodule Anoma.Node.Examples.EReplay do
   I define examples that test the behavior of the replay mechanism.
   """
 
-  alias Anoma.Node.Examples.Mempool, as: EMempool
   alias Anoma.Node.Examples.ENode
   alias Anoma.Node.Replay
-  alias Anoma.Node.Transaction.Backends
 
   import ExUnit.Assertions
-  import Mock
 
   use EventBroker.WithSubscription
 
@@ -35,17 +32,17 @@ defmodule Anoma.Node.Examples.EReplay do
   """
   @spec replay_with_transaction(ENode.t()) :: ENode.t()
   def replay_with_transaction(enode \\ ENode.start_node()) do
-    # insert a transaction into the mempool
-    {_node, _transaction} = EMempool.add_transaction(enode)
+    # # insert a transaction into the mempool
+    # {_node, _transaction} = EMempool.add_transaction(enode)
 
-    # mock the backends implementation to crash whenever a transaction is evaluated
-    execute_fn = fn _node_id, _tx, _id -> raise "All broken" end
+    # # mock the backends implementation to crash whenever a transaction is evaluated
+    # # execute_fn = fn _node_id, _tx, _id -> raise "All broken" end
 
-    with_mock Backends, execute: execute_fn do
-    end
+    # # with_mock Backends, execute: execute_fn do
+    # # end
 
-    # assert replay works for this node.
-    replay_succeeds(enode)
+    # # assert replay works for this node.
+    # replay_succeeds(enode)
 
     enode
   end

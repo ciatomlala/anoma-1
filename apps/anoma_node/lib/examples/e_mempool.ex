@@ -3,10 +3,11 @@ defmodule Anoma.Node.Examples.Mempool do
   I contain examples on how to interact with the mempool.
   """
 
+  alias Anoma.Node.Examples.EEvent
   alias Anoma.Node.Examples.ENode
   alias Anoma.Node.Examples.ETransaction
+  alias Anoma.Node.Tables
   alias Anoma.Node.Transaction.Mempool
-  alias Anoma.Node.Examples.EEvent
 
   import ExUnit.Assertions
 
@@ -160,6 +161,46 @@ defmodule Anoma.Node.Examples.Mempool do
   # -----------------------------------------------------------
   # Blocks
 
+  @doc """
+  I run a transaction and execute it to create a block.
+
+  I do not wait for the events of the block creation.
+  """
+  @spec make_block(
+          ENode.t(),
+          ETransaction.t()
+        ) :: {ENode.t(), ETransaction.t()}
+  def make_block(enode \\ ENode.start_node()) do
+    transaction = ETransaction.faulty_transaction()
+    make_block(enode, transaction)
+  end
+
+  def make_block(enode, transaction) do
+    # subscribe to events here to be sure the events are caught
+    EventBroker.subscribe_me([])
+
+    # fire a transaction
+    {_node, transaction} = execute_transaction(enode, transaction)
+
+    # the transaction is currently waiting for an ordering
+    # or it has already executed if it did not scry.
+    #
+    # to ensure that the transaction completes, a consensus event
+    # must be fired. This is done by the consensus engine
+    # by calling Mempool.execute(node, transaction_ids)
+    # there is no consensus in the current branch, so the call is done manually
+    #
+    # The Mempool.execute call will fire a consensus event
+    # and then call the executor to execute the transactions.
+    #
+    # The executor will order the transactions in the consensus
+    # and then wait for all transactions to complete.
+    # After this, an execution event is sent.
+    Mempool.execute(enode.node_id, [transaction.id])
+
+    {enode, transaction}
+  end
+
   @spec complete_transaction(Anoma.Node.Examples.ENode.t()) ::
           {Anoma.Node.Examples.ENode.t(),
            Anoma.Node.Examples.ETransaction.t()}
@@ -185,31 +226,22 @@ defmodule Anoma.Node.Examples.Mempool do
     # subscribe to events here to be sure the events are caught
     EventBroker.subscribe_me([])
 
-    # fire a transaction
-    {_node, _transaction} = execute_transaction(enode, transaction)
+    # subscribe to mnesia events as well. see below.
+    events_table = Tables.table_events(enode.node_id)
+    :mnesia.subscribe({:table, events_table, :simple})
 
-    # the transaction is currently waiting for an ordering
-    # or it has already executed if it did not scry.
-    #
-    # to ensure that the transaction completes, a consensus event
-    # must be fired. This is done by the consensus engine
-    # by calling Mempool.execute(node, transaction_ids)
-    # there is no consensus in the current branch, so the call is done manually
-    #
-    # The Mempool.execute call will fire a consensus event
-    # and then call the executor to execute the transactions.
-    #
-    # The executor will order the transactions in the consensus
-    # and then wait for all transactions to complete.
-    # After this, an execution event is sent.
-    Mempool.execute(enode.node_id, [transaction.id])
+    {enode, transaction} = make_block(enode, transaction)
 
     # to verify that the transaction completed, n observable effects
     # must be assertd.
     # - consensus event is fired
+    # - the events table writes a new consensus value
     # - order event is fired
     # - execution event is fired
     # - block event is fired
+
+    # wait for the mnesia table to be written fully
+    wait_for_consensus_write(enode, transaction)
 
     # wait for the consensus event
     consensus_event = EEvent.consensus_event(enode, [transaction.id])
@@ -221,6 +253,8 @@ defmodule Anoma.Node.Examples.Mempool do
 
     # wait for the execution event
     execution_event = EEvent.execution_event(enode, transaction)
+
+    # todo: these should be one function wait_for_event..
     EEvent.wait_for_execution_event(enode, execution_event)
 
     # wait for the block event
@@ -247,6 +281,47 @@ defmodule Anoma.Node.Examples.Mempool do
     for {transaction, round} <- Enum.with_index(transactions) do
       complete_transaction(enode, transaction, round)
     end
+
+    enode
+  end
+
+  # -----------------------------------------------------------
+  # Mnesia Sync
+
+  @doc """
+  Given a node id and a transaction list, I wait until these
+  transactions have been written into the events table its consensus column.
+  """
+  @spec wait_for_consensus_write(ENode.t(), ETransaction.t()) :: ENode.t()
+  def wait_for_consensus_write(enode \\ ENode.start_node(), transaction) do
+    events_table = Tables.table_events(enode.node_id)
+    transaction_id = transaction.id
+
+    assert_receive {:mnesia_table_event,
+                    {:write, {^events_table, :consensus, [[^transaction_id]]},
+                     _}},
+                   5000
+
+    enode
+  end
+
+  @doc """
+  Given a node id and a transaction list, I wait until these
+  transactions have been written into the events table its consensus column.
+  """
+  @spec wait_for_transaction_in_table(ENode.t(), ETransaction.t()) ::
+          ENode.t()
+  def wait_for_transaction_in_table(enode \\ ENode.start_node(), transaction) do
+    events_table = Tables.table_events(enode.node_id)
+    transaction_id = transaction.id
+    transaction_backend = transaction.backend
+    transaction_noun = transaction.noun
+
+    assert_receive {:mnesia_table_event,
+                    {:write,
+                     {^events_table, ^transaction_id,
+                      {^transaction_backend, ^transaction_noun}}, _}},
+                   5000
 
     enode
   end
