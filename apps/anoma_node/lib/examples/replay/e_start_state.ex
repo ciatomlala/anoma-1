@@ -145,7 +145,7 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
 
     # assert the transaction I just added is in the list of the startup arguments.
     assert mempool_start_args[:transactions] -- transaction_list == []
-    assert mempool_start_args[:transactions] == []
+    assert transaction_list -- mempool_start_args[:transactions] == []
     assert mempool_start_args[:round] == 0
     assert mempool_start_args[:consensus] == []
 
@@ -237,7 +237,8 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   end
 
   @doc """
-  I check whether the storage arguments for a fresh node are the default arguments.
+  I check whether the storage arguments are default when a transaction is added
+  but not executed.
   """
   @spec storage_args_non_block_transaction(ENode.t()) :: ENode.t()
   def storage_args_non_block_transaction(enode \\ ENode.start_node()) do
