@@ -58,7 +58,12 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   # -----------------------------------------------------------
   # Mempool
 
-  # @spec mempool_args_empty_node(ENode.t()) :: ENode.t()
+  @doc """
+  I start up a new node, or I assume that the given node is empty.
+
+  I compute the startup arguments for this node and verify that they are the default arguments.
+  """
+  @spec mempool_args_fresh_node(ENode.t()) :: ENode.t()
   def mempool_args_fresh_node(enode \\ ENode.start_node()) do
     # there should be 0 transactions
     {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
@@ -71,7 +76,79 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
     enode
   end
 
-  # @spec mempool_args_empty_node(ENode.t()) :: ENode.t()
+  @doc """
+  I start up a new node, or assume the given node is empty.
+
+  I add a transaction to the mempool.
+
+  The startup arguments for this mempool should contain the transaction I added.
+  """
+  @spec mempool_args_non_block_transaction(ENode.t()) :: ENode.t()
+  def mempool_args_non_block_transaction(enode \\ ENode.start_node()) do
+    # run a transaction, but do not create a block
+    # this will make sure the transaction is still present in the mempool's tables
+    # and it should be restored.
+    {_node, transaction} = EMempool.add_transaction(enode)
+
+    # todo this has to go
+    Process.sleep(1000)
+
+    # compute the mempool startup arguments
+    {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
+
+    # assert the transaction I just added is in the list of the startup arguments.
+    assert mempool_start_args[:transactions] == [
+             {transaction.id, {transaction.backend, transaction.noun}}
+           ]
+
+    assert mempool_start_args[:round] == 0
+    assert mempool_start_args[:consensus] == []
+
+    enode
+  end
+
+  @doc """
+  I start up a new node, or assume the given node is empty.
+
+  I add a bunch of transactions to the mempool.
+
+  The startup arguments for this mempool should contain the transactions I added.
+  """
+  @spec mempool_args_non_block_transactions(ENode.t()) :: ENode.t()
+  def mempool_args_non_block_transactions(enode \\ ENode.start_node()) do
+    # run 10 transactions, but do not create a block
+    # this will make sure the transactions are still present in the mempool's tables
+    # and they should be restored.
+    transaction_list =
+      for _ <- 1..10 do
+        {_node, transaction} = EMempool.add_transaction(enode)
+        {transaction.id, {transaction.backend, transaction.noun}}
+      end
+
+    # todo this has to go
+    Process.sleep(1000)
+
+    # compute the mempool startup arguments
+    {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
+
+    # assert the transaction I just added is in the list of the startup arguments.
+    assert mempool_start_args[:transactions] -- transaction_list == []
+
+    assert mempool_start_args[:round] == 0
+    assert mempool_start_args[:consensus] == []
+
+    enode
+  end
+
+  @doc """
+  I start up a new node, or assume the given node is empty.
+
+  I add ten transactions to the mempool and complete all of them so that they are in a block.
+
+  When I compute the startup arguments for this node's mempool, I expect to have the default arguments.
+  """
+
+  @spec mempool_args_non_fresh_node(ENode.t()) :: ENode.t()
   def mempool_args_non_fresh_node(enode \\ ENode.start_node()) do
     # run ten separate transactions in a block through the node.
     EMempool.complete_ten_transactions(enode)
@@ -82,31 +159,6 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
 
     # assert values in the arguments
     assert mempool_start_args[:transactions] == []
-    assert mempool_start_args[:round] == 0
-    assert mempool_start_args[:consensus] == []
-
-    enode
-  end
-
-  @spec mempool_args_non_block_transaction() :: Anoma.Node.Examples.ENode.t()
-  @doc """
-  I check whether the mempool arguments for a fresh node are the default arguments.
-  """
-  @spec mempool_args_non_block_transaction(ENode.t()) :: ENode.t()
-  def mempool_args_non_block_transaction(enode \\ ENode.start_node()) do
-    # run a transaction, but do not create a block
-    # this will make sure the transaction is still present in the mempool's tables
-    # and it should be restored.
-    {_node, transaction} = EMempool.add_transaction(enode)
-
-    Process.sleep(1000)
-
-    {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
-
-    assert mempool_start_args[:transactions] == [
-             {transaction.id, {transaction.backend, transaction.noun}}
-           ]
-
     assert mempool_start_args[:round] == 0
     assert mempool_start_args[:consensus] == []
 

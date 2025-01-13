@@ -95,7 +95,6 @@ defmodule Anoma.Node.Replay.State do
     # read the blocks table for this node
     events_table = Tables.table_events(node_id)
     {:ok, events_summary} = events_table_summary(events_table)
-    IO.inspect(events_summary)
 
     {:ok,
      [
