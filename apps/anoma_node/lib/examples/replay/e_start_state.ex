@@ -80,6 +80,26 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
 
   @doc """
   I start up a new node, or assume the given node is empty.
+  I add ten transactions to the mempool and complete all of them so that they are in a block.
+  When I compute the startup arguments for this node's mempool, I expect to have the default arguments.
+  """
+  @spec mempool_args_non_fresh_node(ENode.t()) :: ENode.t()
+  def mempool_args_non_fresh_node(enode \\ ENode.start_node()) do
+    # run ten separate transactions in a block through the node.
+    EMempool.complete_ten_transactions(enode)
+
+    {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
+
+    # assert values in the arguments
+    assert mempool_start_args[:transactions] == []
+    assert mempool_start_args[:round] == 0
+    assert mempool_start_args[:consensus] == []
+
+    enode
+  end
+
+  @doc """
+  I start up a new node, or assume the given node is empty.
   I add a transaction to the mempool.
   The startup arguments for this mempool should contain the transaction I added.
   """
@@ -106,9 +126,7 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
 
   @doc """
   I start up a new node, or assume the given node is empty.
-
   I add a bunch of transactions to the mempool.
-
   The startup arguments for this mempool should contain the transactions I added.
   """
   @spec mempool_args_non_block_transactions(ENode.t()) :: ENode.t()
@@ -127,27 +145,6 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
 
     # assert the transaction I just added is in the list of the startup arguments.
     assert mempool_start_args[:transactions] -- transaction_list == []
-    assert mempool_start_args[:round] == 0
-    assert mempool_start_args[:consensus] == []
-
-    enode
-  end
-
-  @doc """
-  I start up a new node, or assume the given node is empty.
-
-  I add ten transactions to the mempool and complete all of them so that they are in a block.
-
-  When I compute the startup arguments for this node's mempool, I expect to have the default arguments.
-  """
-  @spec mempool_args_non_fresh_node(ENode.t()) :: ENode.t()
-  def mempool_args_non_fresh_node(enode \\ ENode.start_node()) do
-    # run ten separate transactions in a block through the node.
-    EMempool.complete_ten_transactions(enode)
-
-    {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
-
-    # assert values in the arguments
     assert mempool_start_args[:transactions] == []
     assert mempool_start_args[:round] == 0
     assert mempool_start_args[:consensus] == []
@@ -175,6 +172,11 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
     # so I wait for an mnesia event to be sure the table has been written.
     with_mock Executor, [:passthrough], execute: fn _, _ -> :ok end do
       EventBroker.subscribe_me([])
+
+      # subscribe to mnesia events as well. see below.
+      events_table = Tables.table_events(enode.node_id)
+      :mnesia.subscribe({:table, events_table, :simple})
+
       # start creating a block with a single transaction.
       {_enode, transaction} = EMempool.make_block(enode)
 
