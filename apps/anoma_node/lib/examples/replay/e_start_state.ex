@@ -90,9 +90,6 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
     # and it should be restored.
     {_node, transaction} = EMempool.add_transaction(enode)
 
-    # wait for the transaction to be written in the events table
-    EMempool.wait_for_transaction_in_table(enode, transaction)
-
     # compute the mempool startup arguments
     {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
 
@@ -116,10 +113,6 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   """
   @spec mempool_args_non_block_transactions(ENode.t()) :: ENode.t()
   def mempool_args_non_block_transactions(enode \\ ENode.start_node()) do
-    # subscribe to mnesia events as well. see below.
-    events_table = Tables.table_events(enode.node_id)
-    :mnesia.subscribe({:table, events_table, :simple})
-
     # run 10 transactions, but do not create a block
     # this will make sure the transactions are still present in the mempool's tables
     # and they should be restored.
@@ -149,10 +142,6 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   """
   @spec mempool_args_non_fresh_node(ENode.t()) :: ENode.t()
   def mempool_args_non_fresh_node(enode \\ ENode.start_node()) do
-    # subscribe to mnesia events as well. see below.
-    events_table = Tables.table_events(enode.node_id)
-    :mnesia.subscribe({:table, events_table, :simple})
-
     # run ten separate transactions in a block through the node.
     EMempool.complete_ten_transactions(enode)
 
@@ -186,11 +175,6 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
     # so I wait for an mnesia event to be sure the table has been written.
     with_mock Executor, [:passthrough], execute: fn _, _ -> :ok end do
       EventBroker.subscribe_me([])
-
-      # subscribe to mnesia events as well. see below.
-      events_table = Tables.table_events(enode.node_id)
-      :mnesia.subscribe({:table, events_table, :simple})
-
       # start creating a block with a single transaction.
       {_enode, transaction} = EMempool.make_block(enode)
 
