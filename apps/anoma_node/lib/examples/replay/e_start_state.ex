@@ -162,8 +162,6 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
     # run ten separate transactions in a block through the node.
     EMempool.complete_ten_transactions(enode)
 
-    Process.sleep(1000)
-
     {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
 
     # assert values in the arguments
@@ -265,8 +263,6 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   def storage_args_non_block_transaction(enode \\ ENode.start_node()) do
     # run ten separate transactions in a block through the node.
     EMempool.add_transaction(enode)
-
-    Process.sleep(1000)
 
     # there should be 10 transactions, and the committed height should be 0.
     {:ok, storage_start_args} = State.storage_arguments(enode.node_id)

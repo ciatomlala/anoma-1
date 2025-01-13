@@ -316,6 +316,15 @@ defmodule Anoma.Node.Examples.ETransaction do
   end
 
   @spec inc(String.t()) :: {Backends.backend(), Noun.t()}
+  @spec inc() ::
+          {:debug_term_storage,
+           nonempty_improper_list(
+             nonempty_improper_list(
+               nonempty_improper_list(any(), 0) | 0 | 8,
+               1
+             ),
+             999
+           )}
   def inc(key \\ "key") do
     {:debug_term_storage, Examples.ENock.inc(key)}
   end
@@ -337,13 +346,13 @@ defmodule Anoma.Node.Examples.ETransaction do
   """
   @spec simple_transaction(String.t()) :: __MODULE__.t()
   def simple_transaction(id \\ random_transaction_id()) do
-    {backend, noun} = trivial_transparent_transaction_no_eph()
+    {backend, noun} = zero()
 
     %__MODULE__{
       id: id,
       backend: backend,
       noun: noun,
-      result: :error
+      result: {:ok, [["key" | 0]]}
     }
   end
 

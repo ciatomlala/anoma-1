@@ -102,7 +102,7 @@ defmodule Anoma.Node.Examples.Mempool do
           {ENode.t(), ETransaction.t()}
 
   def execute_transaction(enode \\ ENode.start_node()) do
-    transaction = ETransaction.faulty_transaction()
+    transaction = ETransaction.simple_transaction()
     execute_transaction(enode, transaction)
   end
 
@@ -171,7 +171,7 @@ defmodule Anoma.Node.Examples.Mempool do
           ETransaction.t()
         ) :: {ENode.t(), ETransaction.t()}
   def make_block(enode \\ ENode.start_node()) do
-    transaction = ETransaction.faulty_transaction()
+    transaction = ETransaction.simple_transaction()
     make_block(enode, transaction)
   end
 
@@ -218,7 +218,7 @@ defmodule Anoma.Node.Examples.Mempool do
           non_neg_integer()
         ) :: {ENode.t(), ETransaction.t()}
   def complete_transaction(enode \\ ENode.start_node()) do
-    transaction = ETransaction.faulty_transaction()
+    transaction = ETransaction.simple_transaction()
     complete_transaction(enode, transaction, 0)
   end
 
@@ -242,6 +242,9 @@ defmodule Anoma.Node.Examples.Mempool do
 
     # wait for the mnesia table to be written fully
     wait_for_consensus_write(enode, transaction)
+
+    # wait for the transaction to be written in the table
+    wait_for_transaction_removed(enode, transaction)
 
     # wait for the consensus event
     consensus_event = EEvent.consensus_event(enode, [transaction.id])
@@ -321,6 +324,23 @@ defmodule Anoma.Node.Examples.Mempool do
                     {:write,
                      {^events_table, ^transaction_id,
                       {^transaction_backend, ^transaction_noun}}, _}},
+                   5000
+
+    enode
+  end
+
+  @doc """
+  Given a node id and a transaction, I wait until this transaction is
+  removed from the events table.
+  """
+  @spec wait_for_transaction_removed(ENode.t(), ETransaction.t()) ::
+          ENode.t()
+  def wait_for_transaction_removed(enode \\ ENode.start_node(), transaction) do
+    events_table = Tables.table_events(enode.node_id)
+    transaction_id = transaction.id
+
+    assert_receive {:mnesia_table_event,
+                    {:delete, {^events_table, ^transaction_id}, _}},
                    5000
 
     enode
