@@ -18,7 +18,7 @@ defmodule Anoma.Node.Examples.EReplay do
   @spec replay_succeeds(ENode.t()) :: ENode.t()
   def replay_succeeds(enode \\ ENode.start_node()) do
     # try and replay this node.
-    assert {:ok, _} = Replay.replay_for(enode.node_id)
+    assert Kernel.match?({:ok, _}, Replay.replay_for(enode.node_id))
 
     # start the previous node again.
     ENode.start_node(node_id: enode.node_id, grpc_port: enode.grpc_port)

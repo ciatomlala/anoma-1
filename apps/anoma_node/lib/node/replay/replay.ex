@@ -90,6 +90,12 @@ defmodule Anoma.Node.Replay do
           EventBroker.unsubscribe_me([])
           {:error, :replay_failed}
       end
+    else
+      {:error, :target_node_existed} ->
+        {:error, :replay_failed}
+
+      {:error, :failed_to_create_replay_node} ->
+        {:error, :replay_failed}
     end
   end
 
