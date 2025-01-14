@@ -90,9 +90,19 @@ defmodule Anoma.Node.Replay.State do
 
   @spec mempool_arguments(String.t()) :: {:ok, mempool_args}
   def mempool_arguments(node_id) do
+    # read the blocks table to figure out what the latest block was
+    blocks_table = Tables.table_blocks(node_id)
+    {:ok, blocks_summary} = block_table_summary(blocks_table)
+
     # read the blocks table for this node
     events_table = Tables.table_events(node_id)
     {:ok, events_summary} = events_table_summary(events_table)
+
+    # if the last round of the blocks table is higher,
+    # drop the consensi for those blocks, as they are outdated.
+
+    # IO.inspect(blocks_summary, label: "blocks summary")
+    # IO.inspect(events_summary, label: "events summary")
 
     {:ok,
      [

@@ -9,6 +9,8 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   alias Anoma.Node.Tables
   alias Anoma.Node.Transaction.Executor
   alias Anoma.Node.Registry
+  alias Anoma.Node.Logging
+  alias Anoma.Node.Event
 
   import ExUnit.Assertions
   import Mock
@@ -228,9 +230,16 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   We make sure that this not happen by mocking this behaviour.
   """
   def mempool_obsolete_consensi(enode \\ ENode.start_node()) do
-    logging_engine = Registry.whereis(enode.node_id, Logging)
+    # create one block in the node
+    # create a block from a transaction
+    # {_enode, _transaction} = EMempool.complete_ten_transactions(enode)
 
-    # Logging.update(enode.node_id, vsn)
+    # Process.sleep(100)
+    # # stop the logging engine from processing block events.
+    # logging_engine = Registry.whereis(enode.node_id, Logging)
+    # filter = [Event.node_filter(enode.node_id), Logging.blocks_filter()]
+    # EventBroker.unsubscribe(logging_engine, filter)
+
     # EventBroker.subscribe_me([])
 
     # create a block from a transaction
@@ -240,7 +249,9 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
     # # expect that the consensus contains one element
     # {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
 
-    # # assert values in the arguments
+    # IO.inspect(mempool_start_args)
+
+    # assert values in the arguments
     # assert mempool_start_args[:transactions] == []
     # assert mempool_start_args[:round] == 1
     # assert mempool_start_args[:consensus] == []

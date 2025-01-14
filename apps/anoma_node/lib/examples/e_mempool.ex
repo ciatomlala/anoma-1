@@ -278,9 +278,10 @@ defmodule Anoma.Node.Examples.Mempool do
   @doc """
   I run a list of transactions and create a block for each of them.
   """
-  @spec complete_ten_transactions(ENode.t()) :: ENode.t()
+  @spec complete_ten_transactions(ENode.t()) ::
+          {ENode.t(), [ETransaction.t()]}
   @spec complete_ten_transactions(ENode.t(), [ETransaction.t()]) ::
-          ENode.t()
+          {ENode.t(), [ETransaction.t()]}
   def complete_ten_transactions(enode \\ ENode.start_node()) do
     transactions =
       Enum.map(1..10, fn _ -> ETransaction.simple_transaction() end)
@@ -289,11 +290,13 @@ defmodule Anoma.Node.Examples.Mempool do
   end
 
   def complete_ten_transactions(enode, transactions) do
-    for {transaction, round} <- Enum.with_index(transactions) do
-      complete_transaction(enode, transaction, round)
-    end
+    transactions =
+      for {transaction, round} <- Enum.with_index(transactions) do
+        {_node, transaction} = complete_transaction(enode, transaction, round)
+        transaction
+      end
 
-    enode
+    {enode, transactions}
   end
 
   # -----------------------------------------------------------
