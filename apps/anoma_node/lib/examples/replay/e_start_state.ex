@@ -197,22 +197,8 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
     # create a block from a transaction
     {_enode, _transaction} = EMempool.complete_transaction(enode, next_round)
 
-    # if all goes through
-    # {:ok, [transactions: [], round: 11, consensus: []]}
-
-    # if the deletes did not happen
-    # {:ok,
-    #  [
-    #    transactions: [{"id", {:debug_term_storage, nil}}],
-    #    round: 10,
-    #    consensus: [["id"]]
-    #  ]}
-
     # compute the mempool arguments.
-    # expect that the consensus contains one element
     {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
-
-    # # # IO.inspect(mempool_start_args)
 
     # assert values in the arguments
     assert mempool_start_args[:transactions] == []
