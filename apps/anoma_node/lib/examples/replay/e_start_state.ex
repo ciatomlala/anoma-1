@@ -197,6 +197,9 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
     # create a block from a transaction
     {_enode, _transaction} = EMempool.complete_transaction(enode, next_round)
 
+    {_enode, _transaction} =
+      EMempool.complete_transaction(enode, next_round + 1)
+
     # if all goes through
     # {:ok, [transactions: [], round: 11, consensus: []]}
 
@@ -216,7 +219,7 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
 
     # assert values in the arguments
     assert mempool_start_args[:transactions] == []
-    assert mempool_start_args[:round] == next_round + 1
+    assert mempool_start_args[:round] == next_round + 2
     assert mempool_start_args[:consensus] == []
 
     enode
