@@ -100,9 +100,29 @@ defmodule Anoma.Node.Replay.State do
 
     # if the last round of the blocks table is higher,
     # drop the consensi for those blocks, as they are outdated.
+    events_summary =
+      if blocks_summary.last_round >= events_summary.next_round do
+        # how many blocks is the events table outdated
+        lag = blocks_summary.last_round - events_summary.next_round + 1
 
-    # IO.inspect(blocks_summary, label: "blocks summary")
-    # IO.inspect(events_summary, label: "events summary")
+        # consensi that are not actually in a block already
+        stale_consensi =
+          Enum.take(events_summary.consensus, lag)
+          |> tap(fn x -> IO.inspect(x, label: "stale consensi") end)
+
+        # transactions that are not in a block already
+        stale_transaction_ids = Enum.concat(stale_consensi)
+
+        events_summary
+        |> Map.put(:next_round, blocks_summary.last_round + 1)
+        |> Map.update!(:consensus, fn consensi -> Enum.drop(consensi, lag) end)
+        |> Map.update!(
+          :transactions,
+          &Enum.reject(&1, fn {id, _} -> id in stale_transaction_ids end)
+        )
+      else
+        events_summary
+      end
 
     {:ok,
      [
@@ -173,7 +193,7 @@ defmodule Anoma.Node.Replay.State do
 
   def events_table_summary(table) do
     :mnesia.transaction(fn ->
-      default_summary = %{transactions: [], next_round: 0, consensus: []}
+      default_summary = %{transactions: [], next_round: 1, consensus: []}
 
       # fetch the list of transactions from the events table
       # use guard specs to get all values, except the consensus and round values
@@ -197,7 +217,7 @@ defmodule Anoma.Node.Replay.State do
           data
           |> Enum.reduce(default_summary, fn
             [round: round], summary ->
-              Map.put(summary, :next_round, round + 1)
+              Map.put(summary, :next_round, round)
 
             [consensus: transaction_ids], summary ->
               Map.put(summary, :consensus, transaction_ids)

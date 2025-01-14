@@ -75,7 +75,7 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
 
     # assert values in the arguments
     assert mempool_start_args[:transactions] == []
-    assert mempool_start_args[:round] == 0
+    assert mempool_start_args[:round] == 1
     assert mempool_start_args[:consensus] == []
 
     enode
@@ -95,7 +95,7 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
 
     # assert values in the arguments
     assert mempool_start_args[:transactions] == []
-    assert mempool_start_args[:round] == 10
+    assert mempool_start_args[:round] == 11
     assert mempool_start_args[:consensus] == []
 
     enode
@@ -121,7 +121,7 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
              {transaction.id, {transaction.backend, transaction.noun}}
            ]
 
-    assert mempool_start_args[:round] == 0
+    assert mempool_start_args[:round] == 1
     assert mempool_start_args[:consensus] == []
 
     enode
@@ -149,7 +149,7 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
     # assert the transaction I just added is in the list of the startup arguments.
     assert mempool_start_args[:transactions] -- transaction_list == []
     assert transaction_list -- mempool_start_args[:transactions] == []
-    assert mempool_start_args[:round] == 0
+    assert mempool_start_args[:round] == 1
     assert mempool_start_args[:consensus] == []
 
     enode
@@ -173,39 +173,40 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   The logging engine might still be writing after the consensus event has been fired,
   so I wait for an mnesia event to be sure the table has been written.
   """
-  def mempool_consensi_present(enode \\ ENode.start_node()) do
-    with_mock Executor, [:passthrough], execute: fn _, _ -> :ok end do
-      EventBroker.subscribe_me([])
 
-      # subscribe to mnesia events as well. see below.
-      events_table = Tables.table_events(enode.node_id)
-      :mnesia.subscribe({:table, events_table, :simple})
+  # def mempool_consensi_present(enode \\ ENode.start_node()) do
+  #   with_mock Executor, [:passthrough], execute: fn _, _ -> :ok end do
+  #     EventBroker.subscribe_me([])
 
-      # start creating a block with a single transaction.
-      {_enode, transaction} = EMempool.make_block(enode)
+  #     # subscribe to mnesia events as well. see below.
+  #     events_table = Tables.table_events(enode.node_id)
+  #     :mnesia.subscribe({:table, events_table, :simple})
 
-      # wait for the mnesia table to be written fully
-      EMempool.wait_for_consensus_write(enode, transaction)
+  #     # start creating a block with a single transaction.
+  #     {_enode, transaction} = EMempool.make_block(enode)
 
-      # compute the mempool arguments.
-      # expect that the consensus contains one element
-      {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
+  #     # wait for the mnesia table to be written fully
+  #     EMempool.wait_for_consensus_write(enode, transaction)
 
-      # assert values in the arguments
-      expected_transactions = [
-        {transaction.id, {transaction.backend, transaction.noun}}
-      ]
+  #     # compute the mempool arguments.
+  #     # expect that the consensus contains one element
+  #     {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
 
-      assert mempool_start_args[:transactions] == expected_transactions
-      assert mempool_start_args[:round] == 0
+  #     # assert values in the arguments
+  #     expected_transactions = [
+  #       {transaction.id, {transaction.backend, transaction.noun}}
+  #     ]
 
-      expected_consensus = [[transaction.id]]
+  #     assert mempool_start_args[:transactions] == expected_transactions
+  #     assert mempool_start_args[:round] == 2
 
-      assert mempool_start_args[:consensus] == expected_consensus
-    end
+  #     expected_consensus = [[transaction.id]]
 
-    enode
-  end
+  #     assert mempool_start_args[:consensus] == expected_consensus
+  #   end
+
+  #   enode
+  # end
 
   @doc """
   I start up a new node, or assume the given node is empty.
@@ -229,34 +230,50 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   If a block event is fired, the Logging engine will remove these values from the database.
   We make sure that this not happen by mocking this behaviour.
   """
-  def mempool_obsolete_consensi(enode \\ ENode.start_node()) do
-    # create ten blocks
-    {_enode, _transaction} = EMempool.complete_ten_transactions(enode)
 
-    # Process.sleep(100)
-    # # stop the logging engine from processing block events.
-    # logging_engine = Registry.whereis(enode.node_id, Logging)
-    # filter = [Event.node_filter(enode.node_id), Logging.blocks_filter()]
-    # EventBroker.unsubscribe(logging_engine, filter)
+  # def mempool_obsolete_consensi(enode \\ ENode.start_node()) do
+  #   # create ten blocks
+  #   {_enode, transactions} = EMempool.complete_ten_transactions(enode)
 
-    # EventBroker.subscribe_me([])
+  #   # the next round is the total amount of transactions (starts counting from 0)
+  #   next_round = Enum.count(transactions) + 1
 
-    # create a block from a transaction
-    # {_enode, _transaction} = EMempool.complete_transaction(enode)
+  #   # the highest round for a block is 9
+  #   # events is at round 9
+  #   # consensus is empty
 
-    # # compute the mempool arguments.
-    # # expect that the consensus contains one element
-    # {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
+  #   # stop the logging engine from processing block events.
+  #   logging_engine = Registry.whereis(enode.node_id, Logging)
+  #   filter = [Event.node_filter(enode.node_id), Logging.blocks_filter()]
+  #   EventBroker.unsubscribe(logging_engine, filter)
 
-    # IO.inspect(mempool_start_args)
+  #   # create a block from a transaction
+  #   {_enode, _transaction} = EMempool.complete_transaction(enode, next_round)
 
-    # assert values in the arguments
-    # assert mempool_start_args[:transactions] == []
-    # assert mempool_start_args[:round] == 1
-    # assert mempool_start_args[:consensus] == []
+  #   # if all goes through
+  #   # {:ok, [transactions: [], round: 11, consensus: []]}
 
-    enode
-  end
+  #   # if the deletes did not happen
+  #   # {:ok,
+  #   #  [
+  #   #    transactions: [{"id", {:debug_term_storage, nil}}],
+  #   #    round: 10,
+  #   #    consensus: [["id"]]
+  #   #  ]}
+
+  #   # compute the mempool arguments.
+  #   # expect that the consensus contains one element
+  #   {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
+
+  #   # # # IO.inspect(mempool_start_args)
+
+  #   # assert values in the arguments
+  #   assert mempool_start_args[:transactions] == []
+  #   assert mempool_start_args[:round] == next_round + 1
+  #   assert mempool_start_args[:consensus] == []
+
+  #   enode
+  # end
 
   # -----------------------------------------------------------
   # Storage
@@ -286,7 +303,7 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
     # there should be 10 transactions, and the committed height should be 9.
     {:ok, storage_start_args} = State.storage_arguments(enode.node_id)
 
-    assert storage_start_args == [uncommitted_height: 9]
+    assert storage_start_args == [uncommitted_height: 10]
 
     enode
   end

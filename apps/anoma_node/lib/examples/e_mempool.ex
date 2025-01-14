@@ -225,9 +225,9 @@ defmodule Anoma.Node.Examples.Mempool do
           ETransaction.t(),
           non_neg_integer()
         ) :: {ENode.t(), ETransaction.t()}
-  def complete_transaction(enode \\ ENode.start_node()) do
+  def complete_transaction(enode \\ ENode.start_node(), round \\ 1) do
     transaction = ETransaction.simple_transaction()
-    complete_transaction(enode, transaction, 0)
+    complete_transaction(enode, transaction, round)
   end
 
   def complete_transaction(enode, transaction, round) do
@@ -292,7 +292,9 @@ defmodule Anoma.Node.Examples.Mempool do
   def complete_ten_transactions(enode, transactions) do
     transactions =
       for {transaction, round} <- Enum.with_index(transactions) do
-        {_node, transaction} = complete_transaction(enode, transaction, round)
+        {_node, transaction} =
+          complete_transaction(enode, transaction, round + 1)
+
         transaction
       end
 
