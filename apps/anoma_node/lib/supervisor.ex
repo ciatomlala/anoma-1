@@ -12,6 +12,7 @@ defmodule Anoma.Supervisor do
   use Supervisor
 
   alias Anoma.Node.Tables
+  alias Anoma.Node.Replay.State
 
   @spec start_link(any()) :: Supervisor.on_start()
   def start_link(args) do
@@ -47,17 +48,16 @@ defmodule Anoma.Supervisor do
       Keyword.validate!(args, [
         :node_id,
         :grpc_port,
-        tx_args: [mempool: [], ordering: [], storage: []],
+        :tx_args,
         replay: true
       ])
 
     node_id = args[:node_id]
 
     with {:ok, _} <- initialize_storage(node_id),
-         {:ok, tx_args} <- replay_node(node_id, args[:replay]),
-         tx_args <-
-           if(tx_args == :no_replay, do: args[:tx_args], else: tx_args) do
-      args = Keyword.put(args, :tx_args, tx_args)
+         {:ok, init_args} <- State.startup_arguments(node_id) do
+      # put the arguments in the given arguments
+      args = Keyword.put_new(args, :tx_args, init_args)
 
       DynamicSupervisor.start_child(
         Anoma.Node.NodeSupervisor,

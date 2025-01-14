@@ -28,7 +28,7 @@ defmodule Anoma.Node.Replay.State do
 
   @type mempool_args :: [
           transactions: [any()],
-          round: non_neg_integer(),
+          next_round: non_neg_integer(),
           consensus: [any()]
         ]
 
@@ -187,7 +187,7 @@ defmodule Anoma.Node.Replay.State do
           data
           |> Enum.reduce(default_summary, fn
             [round: round], summary ->
-              Map.put(summary, :round, round + 1)
+              Map.put(summary, :next_round, round + 1)
 
             [consensus: transaction_ids], summary ->
               Map.put(summary, :consensus, transaction_ids)

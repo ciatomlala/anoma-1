@@ -213,6 +213,7 @@ defmodule Anoma.Node.Logging do
         },
         state
       ) do
+    # IO.puts("logging got blockevent")
     {:noreply, handle_block_event(e, state)}
   end
 

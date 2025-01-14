@@ -13,13 +13,10 @@ defmodule Anoma.Node.Examples.EReplay do
   require Logger
 
   @doc """
-  I try replay for the given node, and assert it succeeded.
+  Given a node, I calculate its startup arguments and try to start a new node with them.
   """
   @spec replay_succeeds(ENode.t()) :: ENode.t()
   def replay_succeeds(enode \\ ENode.start_node()) do
-    # stop the given node.
-    ENode.stop_node(enode)
-
     # try and replay this node.
     assert {:ok, _} = Replay.replay_for(enode.node_id)
 
