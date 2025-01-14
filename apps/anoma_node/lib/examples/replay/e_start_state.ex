@@ -230,9 +230,8 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   We make sure that this not happen by mocking this behaviour.
   """
   def mempool_obsolete_consensi(enode \\ ENode.start_node()) do
-    # create one block in the node
-    # create a block from a transaction
-    # {_enode, _transaction} = EMempool.complete_ten_transactions(enode)
+    # create ten blocks
+    {_enode, _transaction} = EMempool.complete_ten_transactions(enode)
 
     # Process.sleep(100)
     # # stop the logging engine from processing block events.
