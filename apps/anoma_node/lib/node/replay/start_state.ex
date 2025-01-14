@@ -106,9 +106,7 @@ defmodule Anoma.Node.Replay.State do
         lag = blocks_summary.last_round - events_summary.next_round + 1
 
         # consensi that are not actually in a block already
-        stale_consensi =
-          Enum.take(events_summary.consensus, lag)
-          |> tap(fn x -> IO.inspect(x, label: "stale consensi") end)
+        stale_consensi = Enum.take(events_summary.consensus, lag)
 
         # transactions that are not in a block already
         stale_transaction_ids = Enum.concat(stale_consensi)

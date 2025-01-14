@@ -270,7 +270,7 @@ defmodule Anoma.Node.Examples.Mempool do
     wait_for_consensus_write(enode, transaction)
 
     # wait for the transaction to be removed from the events table
-    # wait_for_transaction_removed(enode, transaction)
+    wait_for_transaction_removed(enode, transaction)
 
     {enode, transaction}
   end

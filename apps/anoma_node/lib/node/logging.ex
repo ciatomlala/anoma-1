@@ -296,6 +296,8 @@ defmodule Anoma.Node.Logging do
          },
          state
        ) do
+    IO.puts("writing consensus event for #{inspect(list)}")
+
     :mnesia.transaction(fn ->
       table = Tables.table_events(state.node_id)
       pending = match(:consensus, table)
@@ -387,7 +389,7 @@ defmodule Anoma.Node.Logging do
     table = Tables.table_events(node_id)
 
     :mnesia.transaction(fn ->
-      :mnesia.write({table, :round, 0})
+      :mnesia.write({table, :round, 1})
     end)
 
     :ok

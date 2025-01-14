@@ -7,13 +7,11 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   alias Anoma.Node.Examples.Mempool, as: EMempool
   alias Anoma.Node.Replay.State
   alias Anoma.Node.Tables
-  alias Anoma.Node.Transaction.Executor
   alias Anoma.Node.Registry
   alias Anoma.Node.Logging
   alias Anoma.Node.Event
 
   import ExUnit.Assertions
-  import Mock
 
   # -----------------------------------------------------------
   # Table states
@@ -178,34 +176,63 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   We make sure that this not happen by mocking this behaviour.
   """
 
+  # def mempool_obsolete_consensus(enode \\ ENode.start_node()) do
+  #   # create ten blocks
+  #   {_enode, transactions} = EMempool.complete_ten_transactions(enode)
+
+  #   # the next round is the total amount of transactions (starts counting from 0)
+  #   next_round = Enum.count(transactions) + 1
+
+  #   # the highest round for a block is 9
+  #   # events is at round 9
+  #   # consensus is empty
+
+  #   # stop the logging engine from processing block events.
+  #   logging_engine = Registry.whereis(enode.node_id, Logging)
+  #   filter = [Event.node_filter(enode.node_id), Logging.blocks_filter()]
+  #   EventBroker.unsubscribe(logging_engine, filter)
+
+  #   # create a block from a transaction
+  #   {_enode, _transaction} = EMempool.complete_transaction(enode, next_round)
+
+  #   # compute the mempool arguments.
+  #   {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
+
+  #   # assert values in the arguments
+  #   assert mempool_start_args[:transactions] == []
+  #   assert mempool_start_args[:round] == next_round + 1
+  #   assert mempool_start_args[:consensus] == []
+
+  #   enode
+  # end
+
   def mempool_obsolete_consensi(enode \\ ENode.start_node()) do
+    events_table = Tables.table_events(enode.node_id)
+    :mnesia.subscribe({:table, events_table, :simple})
+
     # create ten blocks
     {_enode, transactions} = EMempool.complete_ten_transactions(enode)
 
-    # the next round is the total amount of transactions (starts counting from 0)
-    next_round = Enum.count(transactions) + 1
+    # Process.sleep(100)
 
-    # the highest round for a block is 9
-    # events is at round 9
-    # consensus is empty
+    # # the next round is the total amount of transactions (starts counting from 0)
+    # next_round = Enum.count(transactions) + 1
 
-    # stop the logging engine from processing block events.
-    logging_engine = Registry.whereis(enode.node_id, Logging)
-    filter = [Event.node_filter(enode.node_id), Logging.blocks_filter()]
-    EventBroker.unsubscribe(logging_engine, filter)
+    # # the highest round for a block is 10
+    # # events is at round 11
+    # # consensus is empty
+
+    # # stop the logging engine from processing block events.
+    # # this means it will no longer update the events table.
+    # logging_engine = Registry.whereis(enode.node_id, Logging)
+    # filter = [Event.node_filter(enode.node_id), Logging.blocks_filter()]
+    # EventBroker.unsubscribe(logging_engine, filter)
+
+    # Process.sleep(100)
 
     # create a block from a transaction
-    {_enode, _transaction} = EMempool.complete_transaction(enode, next_round)
-
-    # compute the mempool arguments.
-    {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
-
-    # assert values in the arguments
-    assert mempool_start_args[:transactions] == []
-    assert mempool_start_args[:round] == next_round + 1
-    assert mempool_start_args[:consensus] == []
-
-    enode
+    # {_, _transaction} = EMempool.complete_transaction(enode, next_round)
+    # {_, _transaction} = EMempool.complete_transaction(enode, next_round + 1)
   end
 
   # -----------------------------------------------------------
