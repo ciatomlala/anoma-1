@@ -196,7 +196,7 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
     # create a block from a transaction
     # this call does not wait for any events, so its async.
     # to be sure the block is created, I wait for the block event here myself.
-    {_enode, transaction} = EMempool.make_block(enode, next_round)
+    {_enode, transaction} = EMempool.make_block(enode)
 
     # wait for the block event
     block_event = EEvent.block_event(enode, transaction, next_round)
@@ -214,32 +214,42 @@ defmodule Anoma.Node.Examples.EReplay.StartState do
   end
 
   def mempool_obsolete_consensi(enode \\ ENode.start_node()) do
-    events_table = Tables.table_events(enode.node_id)
-    :mnesia.subscribe({:table, events_table, :simple})
-
     # create ten blocks
     {_enode, transactions} = EMempool.complete_ten_transactions(enode)
 
-    # Process.sleep(100)
+    # the next round is the total amount of transactions (starts counting from 0)
+    next_round = Enum.count(transactions) + 1
 
-    # # the next round is the total amount of transactions (starts counting from 0)
-    # next_round = Enum.count(transactions) + 1
+    # the highest round for a block is 9
+    # events is at round 9
+    # consensus is empty
 
-    # # the highest round for a block is 10
-    # # events is at round 11
-    # # consensus is empty
+    # stop the logging engine from processing block events.
+    logging_engine = Registry.whereis(enode.node_id, Logging)
+    filter = [Event.node_filter(enode.node_id), Logging.blocks_filter()]
+    EventBroker.unsubscribe(logging_engine, filter)
 
-    # # stop the logging engine from processing block events.
-    # # this means it will no longer update the events table.
-    # logging_engine = Registry.whereis(enode.node_id, Logging)
-    # filter = [Event.node_filter(enode.node_id), Logging.blocks_filter()]
-    # EventBroker.unsubscribe(logging_engine, filter)
+    # create 5 blocks, creating 5 stale consensi in the logging engine.
+    for block <- 0..4 do
+      # create a block from a transaction
+      # this call does not wait for any events, so its async.
+      # to be sure the block is created, I wait for the block event here myself.
+      {_enode, transaction} = EMempool.make_block(enode)
 
-    # Process.sleep(100)
+      # wait for the block event
+      block_event = EEvent.block_event(enode, transaction, next_round + block)
+      EEvent.wait_for_block_event(enode, block_event)
+    end
 
-    # create a block from a transaction
-    # {_, _transaction} = EMempool.complete_transaction(enode, next_round)
-    # {_, _transaction} = EMempool.complete_transaction(enode, next_round + 1)
+    # compute the mempool arguments.
+    {:ok, mempool_start_args} = State.mempool_arguments(enode.node_id)
+
+    # assert values in the arguments
+    assert mempool_start_args[:transactions] == []
+    assert mempool_start_args[:round] == next_round + 5
+    assert mempool_start_args[:consensus] == []
+
+    enode
   end
 
   # -----------------------------------------------------------
